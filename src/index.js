@@ -12,7 +12,7 @@ const SERIES_TTL = 3600;   // 1 hour
 const NEWS_KEY = "news:v5:latest";
 const NEWS_TTL = 900;      // 15 minutes
 const REASON_TTL = 86400;  // 24 hours per id (static analysis stable for the day)
-const CALENDAR_KEY = "calendar:v3:thisweek";
+const CALENDAR_KEY = "calendar:v4:thisweek";
 const CALENDAR_TTL = 3600; // 1 hour
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {

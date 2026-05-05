@@ -64,9 +64,25 @@ function getMarketImpact(event) {
   return "🔵 참고";
 }
 
-// KRW가 Forex Factory에 거의 등록 안 되어 매주 수동 보강.
-// 갱신 주기: 매주 월요일 — 한국은행/통계청/관세청/금감원 일정 기반.
+// 매주 수동 보강용 정적 발표.
+// 갱신 주기: 매주 월요일.
 // 갱신 시: CALENDAR_KEY 버전 bump (index.js) 또는 ?fresh=1 호출.
+
+// USD 정적 fallback — Forex Factory가 429/빈 응답일 때 사용.
+// 시간은 EDT(-04:00) 기준 (Forex Factory 형식과 동일).
+const US_STATIC_THIS_WEEK = [
+  { title: "New Home Sales (advance)", date: "2026-05-05T09:59:00-04:00", impact: "Medium", forecast: "", previous: "587K" },
+  { title: "ISM Services PMI",         date: "2026-05-05T10:00:00-04:00", impact: "High",   forecast: "53.7", previous: "54.0" },
+  { title: "JOLTS Job Openings",       date: "2026-05-05T10:00:00-04:00", impact: "High",   forecast: "6.86M", previous: "6.88M" },
+  { title: "New Home Sales",           date: "2026-05-05T10:00:00-04:00", impact: "Medium", forecast: "652K", previous: "635K" },
+  { title: "ADP Non-Farm Employment Change", date: "2026-05-06T08:15:00-04:00", impact: "Medium", forecast: "116K", previous: "62K" },
+  { title: "Unemployment Claims",      date: "2026-05-07T08:30:00-04:00", impact: "Medium", forecast: "205K", previous: "189K" },
+  { title: "Non-Farm Employment Change", date: "2026-05-08T08:30:00-04:00", impact: "High",  forecast: "150K", previous: "228K" },
+  { title: "Average Hourly Earnings m/m", date: "2026-05-08T08:30:00-04:00", impact: "High", forecast: "0.3%", previous: "0.2%" },
+  { title: "Unemployment Rate",        date: "2026-05-08T08:30:00-04:00", impact: "High",   forecast: "4.3%", previous: "4.3%" },
+  { title: "Prelim UoM Consumer Sentiment",   date: "2026-05-08T10:00:00-04:00", impact: "Medium", forecast: "", previous: "" },
+  { title: "Prelim UoM Inflation Expectations", date: "2026-05-08T10:00:00-04:00", impact: "Medium", forecast: "", previous: "" },
+];
 const KR_STATIC_THIS_WEEK = [
   // 5/4 (월) 11:00 — 한국은행 외환보유액 (월초 정기)
   { title: "한국 4월 외환보유액 (한국은행)",
@@ -124,12 +140,24 @@ export async function buildCalendar() {
   } catch (err) {
     fetchError = err.message;
   }
-  const krStatic = KR_STATIC_THIS_WEEK.map((e) => ({
+
+  // USD: Forex Factory 우선, 실패/빈 응답이면 US_STATIC fallback
+  const usEvents = fetched.length
+    ? fetched
+    : US_STATIC_THIS_WEEK.map((e) => ({
+        country: "USD",
+        forecast: "", previous: "", actual: "",
+        ...e,
+      }));
+
+  // KRW: 항상 정적 (Forex Factory가 한국 발표 거의 없음)
+  const krEvents = KR_STATIC_THIS_WEEK.map((e) => ({
     country: "KRW",
     forecast: "", previous: "", actual: "",
     ...e,
   }));
-  const all = [...fetched, ...krStatic].map((e) => ({
+
+  const all = [...usEvents, ...krEvents].map((e) => ({
     ...e,
     marketImpact: getMarketImpact(e),
   }));
@@ -137,5 +165,6 @@ export async function buildCalendar() {
     generatedAt: new Date().toISOString(),
     events: all,
     ...(fetchError ? { fetchError } : {}),
+    ...(fetched.length ? {} : { usSource: "static-fallback" }),
   };
 }

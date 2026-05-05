@@ -13,6 +13,8 @@ Repo: https://github.com/k23380508/mp1
 | `snapshot.js` 카드 필드 추가/변경 | render.js 카드 렌더 함수, kv.js 캐시 schema(필요 시 versioned key), /api/snapshot consumers |
 | `snapshot.js` 새 카드 추가 (BUILDERS+order) | render.js 섹션·heroIds 배치, **render.js `CHARTABLE_IDS` Set + series.js `SERIES_REGISTRY`도 같이 추가** (모달 차트 가능하도록), **배포 후 `curl ?fresh=1` 호출 필수** (KV 90분 캐시라 ?fresh 안 부르면 90분간 새 카드 안 보임), CLAUDE.md 카드 표 |
 | 차트 모달 동작 변경 (render.js script) | /api/series 응답 schema, KV 캐시 (series:id:range), CHARTABLE_IDS, CLAUDE.md 라우트 표 |
+| Alert 임계값 변경 (render.js `ALERT_PCT`) | 동시에 모든 카드 색상/pulse 영향, 사용자 인지 균형 (너무 낮으면 노이즈, 너무 높으면 무의미). 카드별 차등 필요시 alertClass()를 region/id 기반으로 분기 |
+| stats schema 변경 (snapshot.js `STATS_WINDOWS`/`computeStats`) | render.js statsBlock/rangeBar 표시, KV 캐시 무효화 또는 key bump 필요, /api/snapshot consumers, 카드 높이 변동 (그리드 레이아웃 영향) |
 | 뉴스 source 변경 (news.js URL/parse) | KV 캐시 (news:v2:latest, TTL 15분), render.js newsSection HTML/CSS, /api/news consumers, CLAUDE.md 출처 표 |
 | 뉴스 schema 변경 (kr/us/ai 추가/제거, 번역 토글) | render.js newsSection 호출 + grid columns(.news-grid 768+), KV cache key 버전 bump (news:v3:...) — 옛 cache 자동 무효화, /api/news consumers, CLAUDE.md |
 | Workers AI 번역 모델 변경 | wrangler.jsonc ai binding (변경 금지), news.js translateToKo() 모델명·prompt schema, 번역 실패 fallback 동작 (원문 표시) |

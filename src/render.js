@@ -46,6 +46,40 @@ const CHARTABLE_IDS = new Set([
   "gold", "silver", "copper", "btc",
 ]);
 
+const ALERT_PCT = 3;
+
+function alertClass(item) {
+  const pct = item?.delta?.pct;
+  if (!Number.isFinite(pct)) return "";
+  if (pct >= ALERT_PCT) return " alert-up";
+  if (pct <= -ALERT_PCT) return " alert-down";
+  return "";
+}
+
+function rangeBar(label, st, current, unit) {
+  if (!st || !Number.isFinite(st.hi) || !Number.isFinite(st.lo) || st.hi === st.lo) return "";
+  const pos = Math.max(0, Math.min(100, ((current - st.lo) / (st.hi - st.lo)) * 100));
+  const lowStr = escape(fmtValue(st.lo, unit));
+  const hiStr = escape(fmtValue(st.hi, unit));
+  return `
+    <div class="rng">
+      <span class="rng-label">${label}</span>
+      <span class="rng-low" title="${escape(st.loDate || '')} 저점">${lowStr}</span>
+      <span class="rng-track">
+        <span class="rng-marker" style="left:${pos.toFixed(1)}%"></span>
+      </span>
+      <span class="rng-high" title="${escape(st.hiDate || '')} 고점">${hiStr}</span>
+    </div>`;
+}
+
+function statsBlock(item) {
+  if (!item?.stats || !Number.isFinite(item.value)) return "";
+  const order = ["1M", "3M", "6M", "1Y"];
+  const rows = order.filter((k) => item.stats[k]).map((k) => rangeBar(k, item.stats[k], item.value, item.unit)).join("");
+  if (!rows) return "";
+  return `<div class="stats">${rows}</div>`;
+}
+
 function card(item, hero = false) {
   if (item.error) {
     return `
@@ -59,7 +93,7 @@ function card(item, hero = false) {
   const chartable = CHARTABLE_IDS.has(item.id);
   const dataAttr = chartable ? ` data-series-id="${escape(item.id)}" data-label="${escape(item.label)}" tabindex="0" role="button" aria-label="${escape(item.label)} 차트 열기"` : "";
   return `
-    <article class="card${hero ? " hero" : ""}${chartable ? " clickable" : ""}"${dataAttr}>
+    <article class="card${hero ? " hero" : ""}${chartable ? " clickable" : ""}${alertClass(item)}"${dataAttr}>
       <div class="card-head">
         ${regionBadge(item.region)}
         <span class="label">${escape(item.label)}</span>
@@ -67,6 +101,7 @@ function card(item, hero = false) {
       <div class="value">${escape(fmtValue(item.value, item.unit))}</div>
       <div class="delta ${d.dir}">${escape(d.text)}</div>
       <div class="meta">기준 ${escape(item.date || "")}</div>
+      ${statsBlock(item)}
     </article>`;
 }
 
@@ -204,6 +239,31 @@ export function renderHtml(snapshot, news) {
   footer a { color: var(--muted); text-decoration: underline; }
   .card.clickable { cursor: pointer; transition: transform 0.1s ease, border-color 0.1s; }
   .card.clickable:hover, .card.clickable:focus { transform: translateY(-1px); border-color: var(--kr); outline: none; }
+  @keyframes pulse-up {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0.0); border-color: rgba(34,197,94,0.55); }
+    50%      { box-shadow: 0 0 16px 3px rgba(34,197,94,0.55); border-color: rgba(34,197,94,1); }
+  }
+  @keyframes pulse-down {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.0); border-color: rgba(239,68,68,0.55); }
+    50%      { box-shadow: 0 0 16px 3px rgba(239,68,68,0.55); border-color: rgba(239,68,68,1); }
+  }
+  .card.alert-up   { animation: pulse-up 1.6s ease-in-out infinite; border-width: 1px; }
+  .card.alert-down { animation: pulse-down 1.6s ease-in-out infinite; border-width: 1px; }
+  .card.alert-up::before, .card.alert-down::before {
+    content: "주의"; position: absolute; top: 8px; right: 10px;
+    font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 4px;
+    letter-spacing: 0.05em;
+  }
+  .card.alert-up::before { background: rgba(34,197,94,0.18); color: var(--up); }
+  .card.alert-down::before { background: rgba(239,68,68,0.18); color: var(--down); }
+  .card { position: relative; }
+  .stats { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 5px; }
+  .rng { display: grid; grid-template-columns: 22px minmax(0, auto) 1fr minmax(0, auto); align-items: center; gap: 6px; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rng-label { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; font-size: 9px; }
+  .rng-low { color: var(--down); }
+  .rng-high { color: var(--up); text-align: right; }
+  .rng-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; }
+  .rng-marker { position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--text); transform: translateX(-50%); border: 1.5px solid var(--card); box-shadow: 0 0 0 1px var(--text); }
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 12px; backdrop-filter: blur(4px); }
   .modal.hidden { display: none; }
   .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; max-width: 820px; width: 100%; padding: 18px; max-height: 90vh; overflow: auto; }

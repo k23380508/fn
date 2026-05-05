@@ -2,6 +2,42 @@ import { fetchFred, fetchFredYoY } from "./sources/fred.js";
 import { fetchEcos, fetchEcosYoY } from "./sources/ecos.js";
 import { fetchYahooQuote } from "./sources/yahoo.js";
 import { fetchCoinGeckoPrice } from "./sources/coingecko.js";
+import { fetchSeries, SERIES_REGISTRY } from "./series.js";
+
+const STATS_WINDOWS = { "1M": 31, "3M": 92, "6M": 183, "1Y": 366 };
+
+function computeStats(series) {
+  if (!Array.isArray(series) || !series.length) return null;
+  const now = Date.now();
+  const out = {};
+  for (const label of Object.keys(STATS_WINDOWS)) {
+    const days = STATS_WINDOWS[label];
+    const cutoff = now - days * 86400000;
+    let hi = -Infinity, lo = Infinity, hiDate = null, loDate = null, count = 0;
+    for (const p of series) {
+      const t = new Date(p.date).getTime();
+      if (!Number.isFinite(t) || t < cutoff || !Number.isFinite(p.value)) continue;
+      count++;
+      if (p.value > hi) { hi = p.value; hiDate = p.date; }
+      if (p.value < lo) { lo = p.value; loDate = p.date; }
+    }
+    if (count > 0) out[label] = { hi, lo, hiDate, loDate, count };
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+async function enrichWithStats(items, env) {
+  await Promise.all(items.map(async (item) => {
+    if (item.error || !SERIES_REGISTRY[item.id]) return;
+    try {
+      const series = await fetchSeries(item.id, "1Y", env);
+      const stats = computeStats(series);
+      if (stats) item.stats = stats;
+    } catch {
+      // best-effort; leave stats undefined
+    }
+  }));
+}
 
 function deltaPair(latest, prev) {
   if (!Number.isFinite(latest) || !Number.isFinite(prev)) return null;
@@ -179,5 +215,6 @@ export async function buildSnapshot(env) {
     "gold", "silver", "copper", "btc",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });
+  await enrichWithStats(items, env);
   return { generatedAt: new Date().toISOString(), items };
 }

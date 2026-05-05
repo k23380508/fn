@@ -35,7 +35,7 @@ async function buildUsCpiYoy(env) {
 }
 
 async function buildKr10y(env) {
-  const obs = await fetchEcos("721Y001", "5050000", "D", env, { count: 30 });
+  const obs = await fetchEcos("817Y002", "010230000", "D", env, { count: 30 });
   const { latest, prev, date } = pickLatestPrev(obs);
   return { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
 }
@@ -47,7 +47,7 @@ async function buildUs10y(env) {
 }
 
 async function buildKrUnemp(env) {
-  const obs = await fetchEcos("901Y027", "I61E", "M", env, { count: 6 });
+  const obs = await fetchFred("LRHUTTTTKRM156S", env, { limit: 5 });
   const { latest, prev, date } = pickLatestPrev(obs);
   return { id: "kr_unemp", region: "KR", label: "한국 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
 }

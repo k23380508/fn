@@ -63,14 +63,14 @@ function alertClass(item) {
   return "";
 }
 
-function rangeBar(label, st, current, unit) {
-  if (!st || !Number.isFinite(st.hi) || !Number.isFinite(st.lo) || st.hi === st.lo) return "";
-  const pos = Math.max(0, Math.min(100, ((current - st.lo) / (st.hi - st.lo)) * 100));
+function rangeBar(label, st, current, unit, pos, badge) {
   const lowStr = escape(fmtValue(st.lo, unit));
   const hiStr = escape(fmtValue(st.hi, unit));
+  const cls = badge?.cls || "";
+  const tag = badge?.tag || "";
   return `
-    <div class="rng">
-      <span class="rng-label">${label}</span>
+    <div class="rng${cls}">
+      <span class="rng-label">${label}${tag}</span>
       <span class="rng-low" title="${escape(st.loDate || '')} 저점">${lowStr}</span>
       <span class="rng-track">
         <span class="rng-marker" style="left:${pos.toFixed(1)}%"></span>
@@ -82,9 +82,28 @@ function rangeBar(label, st, current, unit) {
 function statsBlock(item) {
   if (!item?.stats || !Number.isFinite(item.value)) return "";
   const order = ["1M", "3M", "6M", "1Y"];
-  const rows = order.filter((k) => item.stats[k]).map((k) => rangeBar(k, item.stats[k], item.value, item.unit)).join("");
-  if (!rows) return "";
-  return `<div class="stats">${rows}</div>`;
+  const rows = order
+    .filter((k) => item.stats[k] && Number.isFinite(item.stats[k].hi) && Number.isFinite(item.stats[k].lo) && item.stats[k].hi !== item.stats[k].lo)
+    .map((k) => {
+      const s = item.stats[k];
+      const pos = Math.max(0, Math.min(100, ((item.value - s.lo) / (s.hi - s.lo)) * 100));
+      return { key: k, stats: s, pos };
+    });
+  if (!rows.length) return "";
+  // Identify extremes for badge tagging
+  const maxPos = Math.max(...rows.map((r) => r.pos));
+  const minPos = Math.min(...rows.map((r) => r.pos));
+  const NEAR_HIGH = 92;
+  const NEAR_LOW = 8;
+  function badgeFor(r) {
+    if (r.pos >= NEAR_HIGH) return { cls: " near-high", tag: ' <span class="rng-tag high">🔥 신고가권</span>' };
+    if (r.pos <= NEAR_LOW) return { cls: " near-low", tag: ' <span class="rng-tag low">🔥 신저가권</span>' };
+    if (rows.length > 1 && r.pos === maxPos && r.pos > 70) return { cls: " soft-high", tag: ' <span class="rng-tag high soft">최고권</span>' };
+    if (rows.length > 1 && r.pos === minPos && r.pos < 30) return { cls: " soft-low", tag: ' <span class="rng-tag low soft">최저권</span>' };
+    return null;
+  }
+  const html = rows.map((r) => rangeBar(r.key, r.stats, item.value, item.unit, r.pos, badgeFor(r))).join("");
+  return `<div class="stats">${html}</div>`;
 }
 
 function card(item, hero = false) {
@@ -274,12 +293,30 @@ export function renderHtml(snapshot, news) {
   .card.alert-down::before { background: rgba(239,68,68,0.18); color: var(--down); }
   .card { position: relative; }
   .stats { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 5px; }
-  .rng { display: grid; grid-template-columns: 22px minmax(0, auto) 1fr minmax(0, auto); align-items: center; gap: 6px; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--muted); }
-  .rng-label { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; font-size: 9px; }
+  .rng { display: grid; grid-template-columns: minmax(56px, auto) minmax(0, auto) 1fr minmax(0, auto); align-items: center; gap: 6px; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--muted); padding: 3px 5px; border-radius: 5px; }
+  .rng-label { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; font-size: 9px; display: flex; align-items: center; gap: 4px; }
   .rng-low { color: var(--down); }
   .rng-high { color: var(--up); text-align: right; }
   .rng-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; }
   .rng-marker { position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--text); transform: translateX(-50%); border: 1.5px solid var(--card); box-shadow: 0 0 0 1px var(--text); }
+  .rng-tag { font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.02em; white-space: nowrap; line-height: 1.3; }
+  .rng-tag.high { background: rgba(34,197,94,0.25); color: var(--up); }
+  .rng-tag.low { background: rgba(239,68,68,0.25); color: var(--down); }
+  .rng-tag.soft { opacity: 0.6; font-weight: 700; }
+  @keyframes rng-pulse-high {
+    0%, 100% { background: rgba(34,197,94,0.04); box-shadow: inset 0 0 0 1px rgba(34,197,94,0.20); }
+    50%      { background: rgba(34,197,94,0.18); box-shadow: inset 0 0 0 1px rgba(34,197,94,0.70); }
+  }
+  @keyframes rng-pulse-low {
+    0%, 100% { background: rgba(239,68,68,0.04); box-shadow: inset 0 0 0 1px rgba(239,68,68,0.20); }
+    50%      { background: rgba(239,68,68,0.18); box-shadow: inset 0 0 0 1px rgba(239,68,68,0.70); }
+  }
+  .rng.near-high { animation: rng-pulse-high 1.6s ease-in-out infinite; }
+  .rng.near-low  { animation: rng-pulse-low 1.6s ease-in-out infinite; }
+  .rng.near-high .rng-marker { background: var(--up); box-shadow: 0 0 0 1px var(--up), 0 0 8px rgba(34,197,94,0.7); }
+  .rng.near-low  .rng-marker { background: var(--down); box-shadow: 0 0 0 1px var(--down), 0 0 8px rgba(239,68,68,0.7); }
+  .rng.soft-high { background: rgba(34,197,94,0.05); }
+  .rng.soft-low  { background: rgba(239,68,68,0.05); }
   .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 12px; backdrop-filter: blur(4px); }
   .modal.hidden { display: none; }
   .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; max-width: 820px; width: 100%; padding: 18px; max-height: 90vh; overflow: auto; }

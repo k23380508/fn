@@ -153,12 +153,13 @@ export function renderHtml(snapshot) {
   .err-msg { color: var(--down); }
   footer { color: var(--muted); font-size: 12px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); line-height: 1.6; }
   footer a { color: var(--muted); text-decoration: underline; }
-  @media (min-width: 481px) {
+  @media (min-width: 640px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }
-  @media (min-width: 800px) {
+  @media (min-width: 1024px) {
     .grid.hero { grid-template-columns: repeat(4, 1fr); }
     .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .grid:not(.hero):not(.four) { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>

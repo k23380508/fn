@@ -70,6 +70,40 @@ function card(item, hero = false) {
     </article>`;
 }
 
+function fmtPubDate(s) {
+  if (!s) return "";
+  try {
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    const now = Date.now();
+    const diffMin = Math.round((now - d.getTime()) / 60000);
+    if (diffMin < 1) return "방금 전";
+    if (diffMin < 60) return `${diffMin}분 전`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `${diffH}시간 전`;
+    const diffD = Math.round(diffH / 24);
+    if (diffD < 7) return `${diffD}일 전`;
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+  } catch {
+    return s;
+  }
+}
+
+function newsSection(title, flagEmoji, items) {
+  if (items?.error) {
+    return `<section><h2>${flagEmoji} ${escape(title)}</h2><div class="meta err-msg">뉴스 로드 실패: ${escape(items.error)}</div></section>`;
+  }
+  if (!Array.isArray(items) || !items.length) {
+    return `<section><h2>${flagEmoji} ${escape(title)}</h2><div class="meta">뉴스 없음</div></section>`;
+  }
+  const list = items.slice(0, 5).map((n) => `
+    <li class="news-item">
+      <a href="${escape(n.link)}" target="_blank" rel="noopener noreferrer" class="news-link">${escape(n.title)}</a>
+      <div class="news-meta">${escape(n.source || "")}${n.source && n.pubDate ? " · " : ""}${escape(fmtPubDate(n.pubDate))}</div>
+    </li>`).join("");
+  return `<section><h2>${flagEmoji} ${escape(title)}</h2><ul class="news-list">${list}</ul></section>`;
+}
+
 function fmtKst(iso) {
   try {
     const d = new Date(iso);
@@ -85,7 +119,7 @@ function fmtKst(iso) {
   }
 }
 
-export function renderHtml(snapshot) {
+export function renderHtml(snapshot, news) {
   const byId = Object.fromEntries(snapshot.items.map((i) => [i.id, i]));
   const heroIds = ["usd_krw", "us_kr_spread"];
   const equityIds = ["kospi", "kosdaq", "sp500", "nasdaq", "vix"];
@@ -181,6 +215,16 @@ export function renderHtml(snapshot) {
   .chart-svg { width: 100%; height: auto; display: block; }
   .chart-loading { color: var(--muted); padding: 60px 20px; text-align: center; font-size: 13px; }
   .chart-meta { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .news-grid { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 12px; }
+  .news-list { list-style: none; padding: 0; margin: 0; }
+  .news-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .news-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .news-link { color: var(--text); text-decoration: none; font-size: 14px; line-height: 1.45; display: block; }
+  .news-link:hover { color: var(--kr); text-decoration: underline; }
+  .news-meta { color: var(--muted); font-size: 11px; margin-top: 5px; }
+  @media (min-width: 768px) {
+    .news-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+  }
   @media (min-width: 640px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }
@@ -217,8 +261,14 @@ export function renderHtml(snapshot) {
   <h2>원자재 & 가상자산</h2>
   <div class="grid four">${assetHtml}</div>
 
+  <h2>경제 뉴스</h2>
+  <div class="news-grid">
+    ${newsSection("한국 경제 뉴스", "🇰🇷", news?.kr)}
+    ${newsSection("미국 경제 뉴스", "🇺🇸", news?.us)}
+  </div>
+
   <footer>
-    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko</div>
+    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko · Google News</div>
     <div>본 페이지는 정보 제공 목적이며, 투자 권유나 자문이 아닙니다. 데이터는 출처에서 지연되어 제공될 수 있습니다.</div>
   </footer>
 </div>

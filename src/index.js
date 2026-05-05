@@ -2,10 +2,13 @@ import { buildSnapshot } from "./snapshot.js";
 import { renderHtml } from "./render.js";
 import { getCached, putCached } from "./kv.js";
 import { fetchSeries, RANGES, SERIES_REGISTRY } from "./series.js";
+import { buildNews } from "./sources/news.js";
 
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
+const NEWS_KEY = "news:latest";
+const NEWS_TTL = 1800;     // 30 minutes
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {
   if (!force) {
@@ -15,6 +18,16 @@ async function getOrBuildSnapshot(env, { force = false } = {}) {
   const fresh = await buildSnapshot(env);
   await putCached(SNAPSHOT_KEY, fresh, env, SNAPSHOT_TTL);
   return { snapshot: fresh, source: "fresh" };
+}
+
+async function getOrBuildNews(env, { force = false } = {}) {
+  if (!force) {
+    const cached = await getCached(NEWS_KEY, env);
+    if (cached?.generatedAt) return cached;
+  }
+  const fresh = await buildNews();
+  await putCached(NEWS_KEY, fresh, env, NEWS_TTL);
+  return fresh;
 }
 
 export default {
@@ -92,10 +105,28 @@ export default {
       }
     }
 
+    if (url.pathname === "/api/news") {
+      try {
+        const force = url.searchParams.get("fresh") === "1";
+        const news = await getOrBuildNews(env, { force });
+        return new Response(JSON.stringify(news), {
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { "content-type": "application/json; charset=utf-8" },
+        });
+      }
+    }
+
     if (url.pathname === "/" || url.pathname === "") {
       try {
-        const { snapshot, source } = await getOrBuildSnapshot(env);
-        const html = renderHtml(snapshot);
+        const [{ snapshot, source }, news] = await Promise.all([
+          getOrBuildSnapshot(env),
+          getOrBuildNews(env).catch((e) => ({ kr: { error: e.message }, us: { error: e.message } })),
+        ]);
+        const html = renderHtml(snapshot, news);
         return new Response(html, {
           headers: {
             "content-type": "text/html; charset=utf-8",

@@ -13,6 +13,7 @@ Repo: https://github.com/k23380508/mp1
 | `snapshot.js` 카드 필드 추가/변경 | render.js 카드 렌더 함수, kv.js 캐시 schema(필요 시 versioned key), /api/snapshot consumers |
 | `snapshot.js` 새 카드 추가 (BUILDERS+order) | render.js 섹션·heroIds 배치, **render.js `CHARTABLE_IDS` Set + series.js `SERIES_REGISTRY`도 같이 추가** (모달 차트 가능하도록), **배포 후 `curl ?fresh=1` 호출 필수** (KV 90분 캐시라 ?fresh 안 부르면 90분간 새 카드 안 보임), CLAUDE.md 카드 표 |
 | 차트 모달 동작 변경 (render.js script) | /api/series 응답 schema, KV 캐시 (series:id:range), CHARTABLE_IDS, CLAUDE.md 라우트 표 |
+| 뉴스 source 변경 (news.js URL/parse) | KV 캐시 (news:latest, TTL 30분), render.js newsSection HTML/CSS, /api/news consumers, CLAUDE.md 출처 표 |
 | `sources/*.js` 응답 shape 변경 | snapshot.js 의 해당 카드 함수, render.js fmt 로직, sparkline 시계열(series.js) |
 | KV `MACRO_CACHE` schema 변경 | kv.js, snapshot.js 캐시 read/write, 기존 캐시 invalidate 또는 versioned key (`v2:snapshot` 등) |
 | 라우트 추가 (index.js) | render.js 의 `<link>`/`<a>`, AGENTS.md, 본 CLAUDE.md 라우트 표 |
@@ -64,17 +65,17 @@ Repo: https://github.com/k23380508/mp1
 
 ```
 src/
-├── index.js        라우터 (/, /api/snapshot, /healthz, /favicon.{ico,svg})
-├── render.js       HTML 렌더링
-├── snapshot.js     12개 KR/US 거시 지표 집계 + sparkline
-├── kv.js           MACRO_CACHE KV 90분 캐시
-├── series.js       sparkline 시계열 처리 (WIP)
-├── worker.js       (사용 안 함 — index.js가 진입점)
+├── index.js        라우터 (/, /api/snapshot, /api/series, /api/news, /healthz, /favicon.{ico,svg})
+├── render.js       HTML 렌더링 + 모달 클라 JS + CHARTABLE_IDS Set
+├── snapshot.js     19개 KR/US 거시 지표 집계 (BUILDERS + order)
+├── series.js       SERIES_REGISTRY + fetchSeries(id, range) — 차트 모달용 시계열 (1M/3M/6M/1Y/5Y, YoY 자동 계산)
+├── kv.js           MACRO_CACHE KV (snapshot 90분, series 1시간, news 30분)
 └── sources/
     ├── ecos.js     한국은행 ECOS API
     ├── fred.js     FRED (St. Louis Fed)
-    ├── yahoo.js    Yahoo Finance v8 chart
-    └── coingecko.js CoinGecko (BTC fallback)
+    ├── yahoo.js    Yahoo Finance v8 chart (single quote + series)
+    ├── coingecko.js CoinGecko (BTC fallback)
+    └── news.js     Google News RSS (KR/US 경제 뉴스 5개씩)
 ```
 
 ## 바인딩 / 환경
@@ -95,6 +96,6 @@ npx wrangler tail mp1   # 라이브 로그
 
 ## 데이터 출처 / 정책
 
-- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko
+- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS)
 - 추측 금지 — 출처에서 받은 값만 표시, fallback 없으면 "—"
 - 페이지 하단 출처 표기 유지

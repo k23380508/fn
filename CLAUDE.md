@@ -4,6 +4,32 @@ Cloudflare Worker. 배포: https://mp1.k23380508.workers.dev
 Repo: https://github.com/k23380508/mp1
 워커 이름: `mp1` (wrangler.jsonc — 변경 금지, 변경 시 배포 URL 죽음)
 
+## 변경 시 영향 매트릭스 (필수 — 변경 전 확인)
+
+데이터 shape이 source → snapshot → cache → render → DOM 여러 층을 흐르므로, 한 곳만 고치면 다른 층 즉시 깨짐. 변경 전 grep으로 사용처 확인 + 영향받는 모든 지점을 같은 commit에 묶을 것.
+
+| 변경 대상 | 동시 확인·수정 필요 지점 |
+|---|---|
+| `snapshot.js` 카드 필드 추가/변경 | render.js 카드 렌더 함수, kv.js 캐시 schema(필요 시 versioned key), /api/snapshot consumers |
+| `sources/*.js` 응답 shape 변경 | snapshot.js 의 해당 카드 함수, render.js fmt 로직, sparkline 시계열(series.js) |
+| KV `MACRO_CACHE` schema 변경 | kv.js, snapshot.js 캐시 read/write, 기존 캐시 invalidate 또는 versioned key (`v2:snapshot` 등) |
+| 라우트 추가 (index.js) | render.js 의 `<link>`/`<a>`, AGENTS.md, 본 CLAUDE.md 라우트 표 |
+| wrangler.jsonc 바인딩 변경 | 코드의 `env.<binding>` 모든 사용처, secrets 재투입(`wrangler secret put`) |
+| compatibility_date / flags 변경 | nodejs_compat 의존 코드 회귀 테스트, `wrangler deploy --dry-run` 빌드 확인 |
+| favicon/SVG 디자인 변경 | render.js `<link>`, 캐시 무효화 (필요 시 query string version) |
+
+**금지**: "일단 핵심만 고치고 나머지는 나중에" — 연쇄 깨짐 1순위 원인. grep 생략 금지. 데이터 shape 변경 후 한 층만 수정 금지.
+
+## 자동 push (필수)
+
+모든 commit은 **즉시** GitHub origin으로 push. commit과 push는 한 단위.
+
+- main push 차단 시 자동 우회: `fix/`·`feat/`·`wip/`·`chore/`·`data/<topic>` 브랜치 생성 후 push, PR 링크 안내
+- 세션 종료 전 `git status` clean + `git log @{u}..` 비어있어야 함 (미푸시 0)
+- push 전 staged diff에서 secret/.env 확인
+- `git push --force` 금지 (사용자가 명시 요청해도 한 번 더 확인)
+- 상세는 글로벌 메모리 [auto_push_rule.md] 참조
+
 ## 다중 기기/세션 작업 규칙 (필수)
 
 이 프로젝트는 iCloud Drive(`~/Library/Mobile Documents/.../ID/VC/mp1`)에 있어 여러 기기에서 동시 접근 가능. iCloud의 비동기 파일 sync와 git이 충돌하면 `.git/index` 깨짐, ref 분기, 미푸시 손실 발생.

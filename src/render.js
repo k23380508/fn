@@ -291,6 +291,10 @@ export function renderHtml(snapshot, news) {
   .range-tabs button { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
   .range-tabs button:hover { color: var(--text); }
   .range-tabs button.active { background: var(--kr); color: white; border-color: var(--kr); }
+  .mode-tabs { display: inline-flex; gap: 0; margin-bottom: 14px; margin-left: 8px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .mode-tabs button { background: transparent; border: none; color: var(--muted); padding: 5px 12px; cursor: pointer; font-size: 12px; font-weight: 500; }
+  .mode-tabs button:hover { color: var(--text); }
+  .mode-tabs button.active { background: var(--us); color: white; }
   .chart-svg { width: 100%; height: auto; display: block; }
   .chart-loading { color: var(--muted); padding: 60px 20px; text-align: center; font-size: 13px; }
   .chart-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
@@ -398,6 +402,10 @@ export function renderHtml(snapshot, news) {
       <button data-range="1Y">1Y</button>
       <button data-range="5Y">5Y</button>
     </div>
+    <div class="mode-tabs" id="mode-tabs" role="tablist" aria-label="차트 모드">
+      <button data-mode="value" class="active" title="실제 가격 (Y축 자동 확대)">값</button>
+      <button data-mode="change" title="일별 % 변화 (변동성 강조)">변화율</button>
+    </div>
     <div id="chart-host"><div class="chart-loading">불러오는 중…</div></div>
     <div id="chart-detail" class="chart-detail" aria-live="polite">막대를 클릭하면 상세 정보가 여기 표시됩니다</div>
     <div id="chart-meta" class="chart-meta"></div>
@@ -412,7 +420,8 @@ export function renderHtml(snapshot, news) {
   var metaEl = document.getElementById("chart-meta");
   var detailEl = document.getElementById("chart-detail");
   var tabs = document.getElementById("range-tabs");
-  var current = { id: null, label: null, range: "1M", series: [], unit: "" };
+  var modeTabs = document.getElementById("mode-tabs");
+  var current = { id: null, label: null, range: "1M", mode: "value", series: [], unit: "" };
 
   function fmtNum(v) {
     if (!isFinite(v)) return "—";
@@ -470,7 +479,8 @@ export function renderHtml(snapshot, news) {
   }
 
   function open(id, label) {
-    current.id = id; current.label = label; current.range = "1M"; current.series = []; current.unit = "";
+    current.id = id; current.label = label; current.range = "1M"; current.mode = "value"; current.series = []; current.unit = "";
+    setActiveMode("value");
     var card = document.querySelector('[data-series-id="' + id + '"]');
     if (card) {
       var v = card.querySelector(".value");
@@ -494,6 +504,17 @@ export function renderHtml(snapshot, news) {
       b.classList.toggle("active", b.dataset.range === r);
     });
   }
+  function setActiveMode(m) {
+    modeTabs.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.mode === m);
+    });
+  }
+  function redraw() {
+    if (!current.series || !current.series.length) return;
+    hostEl.innerHTML = drawSvg(current.series, current.mode);
+    attachBarHandlers();
+    resetDetail();
+  }
   async function load() {
     hostEl.innerHTML = '<div class="chart-loading">불러오는 중…</div>';
     metaEl.textContent = "";
@@ -505,7 +526,7 @@ export function renderHtml(snapshot, news) {
       var s = data.series || [];
       if (!s.length) { hostEl.innerHTML = '<div class="chart-loading">데이터 없음</div>'; return; }
       current.series = s;
-      hostEl.innerHTML = drawSvg(s);
+      hostEl.innerHTML = drawSvg(s, current.mode);
       var first = s[0].date, last = s[s.length - 1].date;
       metaEl.textContent = s.length + " 포인트 · " + first + " ~ " + last + " · 막대 클릭 → 상세";
       attachBarHandlers();
@@ -523,58 +544,84 @@ export function renderHtml(snapshot, news) {
       });
     });
   }
-  function drawSvg(series) {
-    var W = 760, H = 320, P = { top: 14, right: 14, bottom: 30, left: 56 };
+  function drawSvg(series, mode) {
+    var W = 760, H = 320, P = { top: 14, right: 14, bottom: 30, left: 60 };
     var n = series.length;
-    var ys = series.map(function (p) { return p.value; });
-    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
-    // Bars: include 0 baseline if data is all positive/negative; otherwise pad
-    var allPos = yMin >= 0;
-    var allNeg = yMax <= 0;
-    var pad = (yMax - yMin) * 0.06 || Math.abs(yMax) * 0.02 || 1;
-    var y0 = allPos ? Math.min(0, yMin) : yMin - pad;
-    var y1 = allNeg ? Math.max(0, yMax) : yMax + pad;
-    if (y0 === y1) y1 = y0 + 1;
+    var upColor = "#22c55e", downColor = "#ef4444";
     var plotW = W - P.left - P.right;
     var plotH = H - P.top - P.bottom;
     var slot = plotW / Math.max(n, 1);
     var bw = Math.max(1, Math.min(slot - 1, slot * 0.78));
+    // Build per-bar payload depending on mode
+    var bars = []; // { i, value, date, color, rawValue }
+    if (mode === "change") {
+      for (var i = 0; i < n; i++) {
+        var pct = (i === 0 || !series[i-1].value) ? 0 : ((series[i].value - series[i-1].value) / series[i-1].value) * 100;
+        bars.push({ i: i, value: pct, date: series[i].date, color: pct >= 0 ? upColor : downColor, rawValue: series[i].value });
+      }
+    } else {
+      var firstV = series[0].value, lastV = series[n - 1].value;
+      var defaultColor = lastV >= firstV ? upColor : downColor;
+      for (var j = 0; j < n; j++) {
+        var v = series[j].value;
+        var color = j > 0 ? (v >= series[j-1].value ? upColor : downColor) : defaultColor;
+        bars.push({ i: j, value: v, date: series[j].date, color: color });
+      }
+    }
+    var ys = bars.map(function (b) { return b.value; });
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    var hasNeg = yMin < 0;
+    var hasPos = yMax > 0;
+    var pad = (yMax - yMin) * 0.08 || Math.abs(yMax || 1) * 0.05 || 1;
+    var y0, y1;
+    if (mode === "change") {
+      // symmetric around 0 for visual balance
+      var amax = Math.max(Math.abs(yMin), Math.abs(yMax)) + pad;
+      y0 = -amax; y1 = amax;
+    } else {
+      // tight zoom: don't include 0 baseline — let variation fill the canvas
+      y0 = yMin - pad; y1 = yMax + pad;
+    }
+    if (y0 === y1) y1 = y0 + 1;
     var sy = function (v) { return P.top + (1 - (v - y0) / (y1 - y0)) * plotH; };
     var baselineY = sy(0);
-    var firstVal = series[0].value, lastVal = series[n - 1].value;
-    var trendUp = lastVal >= firstVal;
-    var upColor = "#22c55e", downColor = "#ef4444";
-    var defaultColor = trendUp ? upColor : downColor;
-    var bars = "";
-    for (var i = 0; i < n; i++) {
-      var v = series[i].value;
-      var x = P.left + i * slot + (slot - bw) / 2;
-      var top = sy(Math.max(v, 0));
-      var bot = sy(Math.min(v, 0));
-      var h = Math.max(0.5, bot - top);
-      // Per-bar color: vs previous bar (rises green, falls red); first bar uses trend color
-      var color = defaultColor;
-      if (i > 0) {
-        var prev = series[i-1].value;
-        color = v >= prev ? upColor : downColor;
+    var rendered = "";
+    for (var k = 0; k < bars.length; k++) {
+      var b = bars[k];
+      var x = P.left + k * slot + (slot - bw) / 2;
+      var top, bot;
+      if (mode === "change") {
+        top = sy(Math.max(b.value, 0));
+        bot = sy(Math.min(b.value, 0));
+      } else {
+        // Anchor to bottom edge of plot so bars don't extend below the visible area
+        top = sy(b.value);
+        bot = P.top + plotH;
       }
-      bars += '<rect class="bar" data-i="' + i + '" x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + color + '" rx="1"><title>' + series[i].date + " · " + (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2)) + '</title></rect>';
+      var h = Math.max(0.5, bot - top);
+      var labelV = mode === "change"
+        ? (b.value >= 0 ? "+" : "−") + Math.abs(b.value).toFixed(2) + "% (" + (Math.abs(b.rawValue) >= 1000 ? b.rawValue.toFixed(0) : b.rawValue.toFixed(2)) + ")"
+        : (Math.abs(b.value) >= 1000 ? b.value.toFixed(0) : b.value.toFixed(2));
+      rendered += '<rect class="bar" data-i="' + b.i + '" x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + b.color + '" rx="1"><title>' + b.date + " · " + labelV + '</title></rect>';
     }
     var ticks = 4;
     var grid = "";
     for (var t = 0; t <= ticks; t++) {
       var gv = y0 + (t / ticks) * (y1 - y0);
       var gy = sy(gv);
+      var label = mode === "change"
+        ? (gv >= 0 ? "+" : "−") + Math.abs(gv).toFixed(1) + "%"
+        : (Math.abs(gv) >= 1000 ? gv.toFixed(0) : gv.toFixed(2));
       grid += '<line x1="' + P.left + '" y1="' + gy.toFixed(1) + '" x2="' + (W - P.right) + '" y2="' + gy.toFixed(1) + '" stroke="#232a44" stroke-width="0.5"/>';
-      grid += '<text x="' + (P.left - 8) + '" y="' + (gy + 4).toFixed(1) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + (Math.abs(gv) >= 1000 ? gv.toFixed(0) : gv.toFixed(2)) + '</text>';
+      grid += '<text x="' + (P.left - 8) + '" y="' + (gy + 4).toFixed(1) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + label + '</text>';
     }
-    var zeroLine = (y0 < 0 && y1 > 0)
+    var zeroLine = (mode === "change" || (y0 < 0 && y1 > 0))
       ? '<line x1="' + P.left + '" y1="' + baselineY.toFixed(1) + '" x2="' + (W - P.right) + '" y2="' + baselineY.toFixed(1) + '" stroke="#8a93a6" stroke-width="0.8" stroke-dasharray="3 3"/>'
       : "";
     var first = series[0].date, last = series[n - 1].date;
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" class="chart-svg">' +
       grid +
-      bars +
+      rendered +
       zeroLine +
       '<text x="' + P.left + '" y="' + (H - 10) + '" fill="#8a93a6" font-size="11">' + first + '</text>' +
       '<text x="' + (W - P.right) + '" y="' + (H - 10) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + last + '</text>' +
@@ -593,6 +640,13 @@ export function renderHtml(snapshot, news) {
     setActiveTab(b.dataset.range);
     current.range = b.dataset.range;
     load();
+  });
+  modeTabs.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-mode]");
+    if (!b) return;
+    setActiveMode(b.dataset.mode);
+    current.mode = b.dataset.mode;
+    redraw();
   });
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") close();

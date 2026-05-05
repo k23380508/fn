@@ -117,17 +117,22 @@ export default {
         const missing = [];
         for (const id of ids) {
           if (!force) {
-            const cached = await getCached(`reason:v1:${id}`, env);
+            const cached = await getCached(`reason:v2:${id}`, env);
             if (cached?.headline) { out[id] = cached; continue; }
           }
           missing.push(id);
         }
         if (missing.length) {
-          const built = await buildReasonsFor(missing, env);
+          // Look up each missing card's label/delta from cached snapshot so the
+          // LLM has context for the cause analysis.
+          const snap = await getCached(SNAPSHOT_KEY, env);
+          const itemsById = Object.fromEntries(((snap?.items) || []).map((i) => [i.id, i]));
+          const inputs = missing.map((id) => ({ id, item: itemsById[id] || null }));
+          const built = await buildReasonsFor(inputs, env);
           for (const id of missing) {
             if (built[id]) {
               out[id] = built[id];
-              await putCached(`reason:v1:${id}`, built[id], env, REASON_TTL);
+              await putCached(`reason:v2:${id}`, built[id], env, REASON_TTL);
             }
           }
         }

@@ -18,7 +18,8 @@ Repo: https://github.com/k23380508/mp1
 | Alert 임계값 변경 (render.js `ALERT_PCT`) | 동시에 모든 카드 색상/pulse 영향, 사용자 인지 균형 (너무 낮으면 노이즈, 너무 높으면 무의미). 카드별 차등 필요시 alertClass()를 region/id 기반으로 분기 |
 | Range bar 강조 임계값 변경 (statsBlock `NEAR_HIGH`/`NEAR_LOW`) | rng-pulse-high/low CSS 임계 일치, soft-high/low 보조 임계, 카드 시각적 노이즈 ↔ 인지력 균형 |
 | Range bar 레이아웃 변경 (rng-head/rng-body 두 줄 구조) | rangeBar() HTML 구조, .rng/.rng-head/.rng-body CSS, .rng-track 1fr 보장 (라벨/태그 길이 무관 일정 비율 유지) |
-| Reason 추가/변경 (sources/reasons.js QUERIES, /api/reasons) | render.js reasonBlock 임계 (현재 ALERT_PCT 3%) + `ALWAYS_REASON_IDS` 핀 셋, 클라 JS loadReasons cap (현재 14), 서버 /api/reasons cap (현재 14), KV key `reason:v1:<id>` (TTL 30분) — query 변경 시 v2 bump, .reason-link CSS, CLAUDE.md 출처 표 |
+| Reason 추가/변경 (sources/reasons.js QUERIES, /api/reasons) | render.js reasonBlock 임계 (현재 ALERT_PCT 3%) + `ALWAYS_REASON_IDS` 핀 셋(현재 8개: gold/silver/copper/btc + kospi/kosdaq/sp500/nasdaq), 클라 JS loadReasons cap (현재 14), 서버 /api/reasons cap (현재 14), KV key `reason:v2:<id>` (TTL 30분) — schema 변경 시 v3 bump, .reason-link/.analysis CSS, CLAUDE.md 출처 표 |
+| Reason 분석 LLM 변경 (reasons.js generateAnalysis) | 모델 (현재 `@cf/meta/llama-3.1-8b-instruct`), prompt 구조, max_tokens, temperature, /api/reasons에서 snapshot KV 조회 후 item.label·delta 전달 (item 없으면 fallback to top headline + m2m100 번역), .reason-link.analysis 노란 강조 CSS, AI 뱃지 |
 | Yahoo 카드 builder (buildYahooCard 헬퍼) | makeBigtechBuilder + buildKospi/buildKosdaq/buildNasdaq/buildVix/buildGold/buildSilver/buildCopper/buildBitcoin 모두 같은 헬퍼 사용 — 1y range 한 번 fetch로 value+prev+stats(hi/lo/changePct) 통합. 변경 시 prev 계산(series[len-2])·stats 채움 동시에 영향 |
 | stats `changePct` (rangeBar 변화율 chip) | render.js rangeBar 안 chgChip 표시, .rng-chg.up/.down/.flat CSS, computeStats의 startValue/endValue 필드 의존 |
 | stats schema 변경 (snapshot.js `STATS_WINDOWS`/`computeStats`) | render.js statsBlock/rangeBar 표시, KV 캐시 무효화 또는 key bump 필요, /api/snapshot consumers, 카드 높이 변동 (그리드 레이아웃 영향) |

@@ -76,7 +76,45 @@ async function translateToKo(text, env) {
   } catch { return null; }
 }
 
-async function fetchOne(id, env) {
+// Generate a single-line cause-effect analysis (NOT a headline quote) using
+// an instruction-tuned LLM, fed multiple recent headlines as context.
+async function generateAnalysis(item, headlines, env) {
+  if (!env?.AI || !item || !headlines?.length) return null;
+  const pct = item?.delta?.pct;
+  const pctStr = Number.isFinite(pct) ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%` : "최근 변동";
+  const headlinesText = headlines.slice(0, 5).map((h, i) => `${i+1}. ${h.title}`).join("\n");
+  const userPrompt = `종목/지표: ${item.label || item.id}
+최근 변동: ${pctStr}
+
+관련 최신 뉴스 헤드라인:
+${headlinesText}
+
+위 뉴스들을 종합해 ${item.label || item.id}이(가) ${pctStr} 움직인 핵심 원인을 한국어 한 문장(80자 이내)으로 설명하세요. 단순 헤드라인 인용이 아니라 인과관계로 풀어 주세요. 설명만 한 문장으로 답하고 다른 텍스트는 추가하지 마세요.`;
+  try {
+    const res = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      messages: [
+        { role: "system", content: "당신은 한국 금융 시장 분석가입니다. 자산·지표 변동 원인을 한국어 한 문장으로 압축 설명합니다. 출력은 항상 한국어로, 단순 뉴스 제목 인용은 금지합니다." },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 160,
+      temperature: 0.3,
+    });
+    let text = res?.response;
+    if (typeof text !== "string") return null;
+    // first non-empty line, trim quotes/markers
+    text = text.trim().split(/[\n\r]+/).map((s) => s.trim()).filter(Boolean)[0] || "";
+    text = text.replace(/^["“”'`]+|["“”'`]+$/g, "").replace(/^[-•·]\s*/, "").trim();
+    if (!text || text.length < 8) return null;
+    if (text.length > 140) text = text.slice(0, 140) + "…";
+    return text;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchOne(input, env) {
+  const id = typeof input === "string" ? input : input.id;
+  const item = typeof input === "object" ? input.item : null;
   const def = QUERIES[id];
   if (!def) return null;
   try {
@@ -86,29 +124,54 @@ async function fetchOne(id, env) {
     });
     if (!res.ok) return null;
     const xml = await res.text();
-    const m = /<item>([\s\S]*?)<\/item>/.exec(xml);
-    if (!m) return null;
-    const block = m[1];
-    let title = unwrapCdata(extract(block, "title"));
-    const link = unwrapCdata(extract(block, "link"));
-    const source = unwrapCdata(extract(block, "source"));
+    const heads = [];
+    const itemRe = /<item>([\s\S]*?)<\/item>/g;
+    let m;
+    while ((m = itemRe.exec(xml)) !== null && heads.length < 5) {
+      const block = m[1];
+      heads.push({
+        title: unwrapCdata(extract(block, "title")),
+        link: unwrapCdata(extract(block, "link")),
+        source: unwrapCdata(extract(block, "source")),
+      });
+    }
+    if (!heads.length) return null;
+    const top = heads[0];
+
+    // Try LLM-generated cause analysis first (uses all 5 headlines as context).
+    const analysis = await generateAnalysis(item, heads, env);
+    if (analysis) {
+      return {
+        headline: analysis,
+        link: top.link,
+        source: top.source,
+        analysis: true,
+        translated: false,
+      };
+    }
+
+    // Fallback: top headline (translate to KO if English source)
+    let title = top.title;
     let translated = false;
     if (!def.ko && title) {
       const ko = await translateToKo(title, env);
       if (ko) { title = ko; translated = true; }
     }
-    return { headline: title, link, source, translated };
+    return { headline: title, link: top.link, source: top.source, translated, analysis: false };
   } catch {
     return null;
   }
 }
 
-export async function buildReasonsFor(ids, env, { batch = 5 } = {}) {
+export async function buildReasonsFor(inputs, env, { batch = 5 } = {}) {
   const out = {};
-  for (let i = 0; i < ids.length; i += batch) {
-    const chunk = ids.slice(i, i + batch);
-    const res = await Promise.all(chunk.map((id) => fetchOne(id, env)));
-    chunk.forEach((id, j) => { if (res[j] && res[j].headline) out[id] = res[j]; });
+  for (let i = 0; i < inputs.length; i += batch) {
+    const chunk = inputs.slice(i, i + batch);
+    const res = await Promise.all(chunk.map((inp) => fetchOne(inp, env)));
+    chunk.forEach((inp, j) => {
+      const id = typeof inp === "string" ? inp : inp.id;
+      if (res[j] && res[j].headline) out[id] = res[j];
+    });
   }
   return out;
 }

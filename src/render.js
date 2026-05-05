@@ -78,13 +78,15 @@ function fmtKst(iso) {
 
 export function renderHtml(snapshot) {
   const byId = Object.fromEntries(snapshot.items.map((i) => [i.id, i]));
-  const heroIds = ["usd_krw", "us_kr_spread", "kospi", "kosdaq", "sp500"];
+  const heroIds = ["usd_krw", "us_kr_spread"];
+  const equityIds = ["kospi", "kosdaq", "sp500", "nasdaq", "vix"];
   const ratesIds = ["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"];
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
   const assetIds = ["gold", "silver", "copper", "btc"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
+  const equityHtml = equityIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const ratesHtml = ratesIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const inflHtml = inflationIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const laborHtml = laborIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
@@ -158,9 +160,10 @@ export function renderHtml(snapshot) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }
   @media (min-width: 1024px) {
-    .grid.hero { grid-template-columns: repeat(5, 1fr); }
+    .grid.hero { grid-template-columns: repeat(2, 1fr); }
+    .grid.five { grid-template-columns: repeat(5, 1fr); }
     .grid.four { grid-template-columns: repeat(4, 1fr); }
-    .grid:not(.hero):not(.four) { grid-template-columns: repeat(2, 1fr); }
+    .grid:not(.hero):not(.four):not(.five) { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -173,6 +176,9 @@ export function renderHtml(snapshot) {
 
   <h2>핵심 지표</h2>
   <div class="grid hero">${heroHtml}</div>
+
+  <h2>주식 지수 & 변동성</h2>
+  <div class="grid five">${equityHtml}</div>
 
   <h2>금리</h2>
   <div class="grid four">${ratesHtml}</div>

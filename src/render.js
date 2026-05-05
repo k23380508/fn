@@ -215,8 +215,8 @@ function fmtKst(iso) {
 
 export function renderHtml(snapshot, news) {
   const byId = Object.fromEntries(snapshot.items.map((i) => [i.id, i]));
-  const heroIds = ["usd_krw", "us_kr_spread"];
-  const equityIds = ["kospi", "kosdaq", "sp500", "nasdaq", "vix"];
+  const heroIds = ["usd_krw", "vix"];
+  const equityIds = ["kospi", "kosdaq", "sp500", "nasdaq"];
   const ratesIds = ["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"];
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
@@ -423,8 +423,8 @@ export function renderHtml(snapshot, news) {
   <h2>핵심 지표</h2>
   <div class="grid hero">${heroHtml}</div>
 
-  <h2>주식 지수 & 변동성</h2>
-  <div class="grid five">${equityHtml}</div>
+  <h2>주식 지수</h2>
+  <div class="grid four">${equityHtml}</div>
 
   <h2>금리</h2>
   <div class="grid four">${ratesHtml}</div>

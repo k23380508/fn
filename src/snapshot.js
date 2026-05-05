@@ -192,26 +192,6 @@ function makeBigtechBuilder(t) {
   return () => buildYahooCard({ id: t.id, region: t.region, label: t.label, unit: t.unit, symbol: t.symbol });
 }
 
-function buildSpread(usFedRow, krBaseRow) {
-  if (!usFedRow || !krBaseRow || usFedRow.error || krBaseRow.error) {
-    throw new Error("spread depends on US Fed and KR base — one missing");
-  }
-  const value = usFedRow.value - krBaseRow.value;
-  const prev = (usFedRow.prev ?? null) !== null && (krBaseRow.prev ?? null) !== null
-    ? usFedRow.prev - krBaseRow.prev
-    : null;
-  return {
-    id: "us_kr_spread",
-    region: "FX",
-    label: "한미 금리차 (US − KR)",
-    unit: "%p",
-    value,
-    prev,
-    delta: deltaPair(value, prev),
-    date: usFedRow.date,
-  };
-}
-
 const BUILDERS = [
   { id: "kr_base_rate", fn: buildKrBaseRate },
   { id: "us_fed_funds", fn: buildUsFedFunds },
@@ -243,15 +223,9 @@ export async function buildSnapshot(env) {
     else byId[id] = { id, error: r.reason?.message || String(r.reason) };
   });
 
-  try {
-    byId.us_kr_spread = buildSpread(byId.us_fed_funds, byId.kr_base_rate);
-  } catch (e) {
-    byId.us_kr_spread = { id: "us_kr_spread", error: e.message };
-  }
-
   const order = [
-    "usd_krw", "us_kr_spread",
-    "kospi", "kosdaq", "sp500", "nasdaq", "vix",
+    "usd_krw", "vix",
+    "kospi", "kosdaq", "sp500", "nasdaq",
     "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
     "gold", "silver", "copper", "btc",

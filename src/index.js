@@ -7,8 +7,8 @@ import { buildNews } from "./sources/news.js";
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
-const NEWS_KEY = "news:latest";
-const NEWS_TTL = 1800;     // 30 minutes
+const NEWS_KEY = "news:v2:latest";
+const NEWS_TTL = 900;      // 15 minutes
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {
   if (!force) {
@@ -25,7 +25,7 @@ async function getOrBuildNews(env, { force = false } = {}) {
     const cached = await getCached(NEWS_KEY, env);
     if (cached?.generatedAt) return cached;
   }
-  const fresh = await buildNews();
+  const fresh = await buildNews(env);
   await putCached(NEWS_KEY, fresh, env, NEWS_TTL);
   return fresh;
 }

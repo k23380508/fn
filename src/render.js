@@ -91,17 +91,20 @@ function fmtPubDate(s) {
 
 function newsSection(title, flagEmoji, items) {
   if (items?.error) {
-    return `<section><h2>${flagEmoji} ${escape(title)}</h2><div class="meta err-msg">뉴스 로드 실패: ${escape(items.error)}</div></section>`;
+    return `<section class="news-col"><h2>${flagEmoji} ${escape(title)}</h2><div class="meta err-msg">뉴스 로드 실패: ${escape(items.error)}</div></section>`;
   }
   if (!Array.isArray(items) || !items.length) {
-    return `<section><h2>${flagEmoji} ${escape(title)}</h2><div class="meta">뉴스 없음</div></section>`;
+    return `<section class="news-col"><h2>${flagEmoji} ${escape(title)}</h2><div class="meta">뉴스 없음</div></section>`;
   }
-  const list = items.slice(0, 5).map((n) => `
+  const list = items.slice(0, 5).map((n) => {
+    const transBadge = n.translated ? '<span class="ko-badge" title="한국어 자동 번역">KO</span>' : "";
+    return `
     <li class="news-item">
-      <a href="${escape(n.link)}" target="_blank" rel="noopener noreferrer" class="news-link">${escape(n.title)}</a>
+      <a href="${escape(n.link)}" target="_blank" rel="noopener noreferrer" class="news-link">${transBadge}${escape(n.title)}</a>
       <div class="news-meta">${escape(n.source || "")}${n.source && n.pubDate ? " · " : ""}${escape(fmtPubDate(n.pubDate))}</div>
-    </li>`).join("");
-  return `<section><h2>${flagEmoji} ${escape(title)}</h2><ul class="news-list">${list}</ul></section>`;
+    </li>`;
+  }).join("");
+  return `<section class="news-col"><h2>${flagEmoji} ${escape(title)}</h2><ul class="news-list">${list}</ul></section>`;
 }
 
 function fmtKst(iso) {
@@ -215,15 +218,17 @@ export function renderHtml(snapshot, news) {
   .chart-svg { width: 100%; height: auto; display: block; }
   .chart-loading { color: var(--muted); padding: 60px 20px; text-align: center; font-size: 13px; }
   .chart-meta { color: var(--muted); font-size: 12px; margin-top: 10px; }
-  .news-grid { display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 12px; }
+  .news-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 12px; }
+  .news-col h2 { margin-top: 0; }
   .news-list { list-style: none; padding: 0; margin: 0; }
-  .news-item { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .news-item { padding: 11px 0; border-bottom: 1px solid var(--border); }
   .news-item:last-child { border-bottom: none; padding-bottom: 0; }
   .news-link { color: var(--text); text-decoration: none; font-size: 14px; line-height: 1.45; display: block; }
   .news-link:hover { color: var(--kr); text-decoration: underline; }
   .news-meta { color: var(--muted); font-size: 11px; margin-top: 5px; }
+  .ko-badge { display: inline-block; font-size: 9px; font-weight: 700; color: var(--kr); background: rgba(59,130,246,0.15); padding: 1px 5px; border-radius: 4px; margin-right: 6px; vertical-align: middle; letter-spacing: 0.04em; }
   @media (min-width: 768px) {
-    .news-grid { grid-template-columns: repeat(2, 1fr); gap: 32px; }
+    .news-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
   }
   @media (min-width: 640px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
@@ -261,14 +266,15 @@ export function renderHtml(snapshot, news) {
   <h2>원자재 & 가상자산</h2>
   <div class="grid four">${assetHtml}</div>
 
-  <h2>경제 뉴스</h2>
+  <h2>핫 뉴스</h2>
   <div class="news-grid">
-    ${newsSection("한국 경제 뉴스", "🇰🇷", news?.kr)}
-    ${newsSection("미국 경제 뉴스", "🇺🇸", news?.us)}
+    ${newsSection("한국 톱 뉴스", "🇰🇷", news?.kr)}
+    ${newsSection("미국 톱 뉴스", "🇺🇸", news?.us)}
+    ${newsSection("AI 뉴스", "🤖", news?.ai)}
   </div>
 
   <footer>
-    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko · Google News</div>
+    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko · Google News · 번역: Cloudflare Workers AI (m2m100)</div>
     <div>본 페이지는 정보 제공 목적이며, 투자 권유나 자문이 아닙니다. 데이터는 출처에서 지연되어 제공될 수 있습니다.</div>
   </footer>
 </div>

@@ -13,7 +13,9 @@ Repo: https://github.com/k23380508/mp1
 | `snapshot.js` 카드 필드 추가/변경 | render.js 카드 렌더 함수, kv.js 캐시 schema(필요 시 versioned key), /api/snapshot consumers |
 | `snapshot.js` 새 카드 추가 (BUILDERS+order) | render.js 섹션·heroIds 배치, **render.js `CHARTABLE_IDS` Set + series.js `SERIES_REGISTRY`도 같이 추가** (모달 차트 가능하도록), **배포 후 `curl ?fresh=1` 호출 필수** (KV 90분 캐시라 ?fresh 안 부르면 90분간 새 카드 안 보임), CLAUDE.md 카드 표 |
 | 차트 모달 동작 변경 (render.js script) | /api/series 응답 schema, KV 캐시 (series:id:range), CHARTABLE_IDS, CLAUDE.md 라우트 표 |
-| 뉴스 source 변경 (news.js URL/parse) | KV 캐시 (news:latest, TTL 30분), render.js newsSection HTML/CSS, /api/news consumers, CLAUDE.md 출처 표 |
+| 뉴스 source 변경 (news.js URL/parse) | KV 캐시 (news:v2:latest, TTL 15분), render.js newsSection HTML/CSS, /api/news consumers, CLAUDE.md 출처 표 |
+| 뉴스 schema 변경 (kr/us/ai 추가/제거, 번역 토글) | render.js newsSection 호출 + grid columns(.news-grid 768+), KV cache key 버전 bump (news:v3:...) — 옛 cache 자동 무효화, /api/news consumers, CLAUDE.md |
+| Workers AI 번역 모델 변경 | wrangler.jsonc ai binding (변경 금지), news.js translateToKo() 모델명·prompt schema, 번역 실패 fallback 동작 (원문 표시) |
 | `sources/*.js` 응답 shape 변경 | snapshot.js 의 해당 카드 함수, render.js fmt 로직, sparkline 시계열(series.js) |
 | KV `MACRO_CACHE` schema 변경 | kv.js, snapshot.js 캐시 read/write, 기존 캐시 invalidate 또는 versioned key (`v2:snapshot` 등) |
 | 라우트 추가 (index.js) | render.js 의 `<link>`/`<a>`, AGENTS.md, 본 CLAUDE.md 라우트 표 |
@@ -81,6 +83,7 @@ src/
 ## 바인딩 / 환경
 
 - KV: `MACRO_CACHE` (id `4b024d35834f4d85b912e903fc785e36`) — wrangler.jsonc, 변경 금지
+- AI: `env.AI` (Workers AI binding) — `@cf/meta/m2m100-1.2b` 영→한 뉴스 제목 번역
 - Secrets: ECOS API key, FRED API key (각 source에서 `env.*`로 참조 — `wrangler secret put`로 관리)
 - compatibility_date: 2026-05-02
 
@@ -96,6 +99,6 @@ npx wrangler tail mp1   # 라이브 로그
 
 ## 데이터 출처 / 정책
 
-- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS)
+- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS) · Cloudflare Workers AI (m2m100, 영→한 번역)
 - 추측 금지 — 출처에서 받은 값만 표시, fallback 없으면 "—"
 - 페이지 하단 출처 표기 유지

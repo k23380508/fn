@@ -1,5 +1,7 @@
-const KR_URL = "https://news.google.com/rss/search?q=%EA%B2%BD%EC%A0%9C+OR+%EC%A6%9D%EC%8B%9C+OR+%EA%B8%88%EC%9C%B5+OR+%ED%99%98%EC%9C%A8&hl=ko&gl=KR&ceid=KR:ko";
-const US_URL = "https://news.google.com/rss/search?q=economy+OR+stock+OR+fed+OR+market&hl=en&gl=US&ceid=US:en";
+// Top headlines (general "hottest news") for KR + US, plus AI-focused search.
+const KR_URL = "https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko";
+const US_URL = "https://news.google.com/rss?hl=en&gl=US&ceid=US:en";
+const AI_URL = "https://news.google.com/rss/search?q=%22AI%22+OR+OpenAI+OR+Anthropic+OR+ChatGPT+OR+Claude+OR+Gemini+OR+LLM+OR+%22Workers+AI%22&hl=en&gl=US&ceid=US:en&when=1d";
 
 function decodeEntities(s) {
   return (s || "")
@@ -26,7 +28,7 @@ function extract(block, tag) {
 
 async function fetchRss(url, limit) {
   const res = await fetch(url, {
-    cf: { cacheTtl: 900, cacheEverything: true },
+    cf: { cacheTtl: 300, cacheEverything: true },
     headers: { "User-Agent": "Mozilla/5.0 (compatible; mp1-worker/1.0)" },
   });
   if (!res.ok) throw new Error(`News HTTP ${res.status}`);
@@ -46,14 +48,44 @@ async function fetchRss(url, limit) {
   return items;
 }
 
-export async function buildNews({ limit = 5 } = {}) {
-  const [krRes, usRes] = await Promise.allSettled([
-    fetchRss(KR_URL, limit),
-    fetchRss(US_URL, limit),
+async function translateToKo(text, env) {
+  if (!env?.AI || !text) return null;
+  try {
+    const res = await env.AI.run("@cf/meta/m2m100-1.2b", {
+      text,
+      source_lang: "english",
+      target_lang: "korean",
+    });
+    const ko = res?.translated_text;
+    if (ko && typeof ko === "string" && ko.trim() && ko.trim() !== text.trim()) return ko.trim();
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSection(url, limit, { translate, env }) {
+  const items = await fetchRss(url, limit);
+  if (!translate) {
+    return items.map((n) => ({ ...n, originalTitle: n.title }));
+  }
+  return Promise.all(items.map(async (n) => {
+    const ko = await translateToKo(n.title, env);
+    return { ...n, originalTitle: n.title, title: ko || n.title, translated: !!ko };
+  }));
+}
+
+export async function buildNews(env, { limit = 5 } = {}) {
+  const [krRes, usRes, aiRes] = await Promise.allSettled([
+    fetchSection(KR_URL, limit, { translate: false, env }),
+    fetchSection(US_URL, limit, { translate: true, env }),
+    fetchSection(AI_URL, limit, { translate: true, env }),
   ]);
+  const pack = (r) => r.status === "fulfilled" ? r.value : { error: r.reason?.message || String(r.reason) };
   return {
     generatedAt: new Date().toISOString(),
-    kr: krRes.status === "fulfilled" ? krRes.value : { error: krRes.reason?.message || String(krRes.reason) },
-    us: usRes.status === "fulfilled" ? usRes.value : { error: usRes.reason?.message || String(usRes.reason) },
+    kr: pack(krRes),
+    us: pack(usRes),
+    ai: pack(aiRes),
   };
 }

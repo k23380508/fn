@@ -293,7 +293,19 @@ export function renderHtml(snapshot, news) {
   .range-tabs button.active { background: var(--kr); color: white; border-color: var(--kr); }
   .chart-svg { width: 100%; height: auto; display: block; }
   .chart-loading { color: var(--muted); padding: 60px 20px; text-align: center; font-size: 13px; }
-  .chart-meta { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  .chart-meta { color: var(--muted); font-size: 12px; margin-top: 6px; }
+  .chart-detail { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: rgba(0,0,0,0.18); font-size: 13px; min-height: 40px; display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; color: var(--muted); }
+  .chart-detail.placeholder { color: var(--muted); font-size: 12px; justify-content: center; min-height: 36px; }
+  .cd-date { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .cd-value { color: var(--text); font-variant-numeric: tabular-nums; }
+  .cd-ago { color: var(--muted); font-size: 12px; }
+  .cd-chg { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .cd-chg.up { color: var(--up); }
+  .cd-chg.down { color: var(--down); }
+  .cd-chg.flat { color: var(--muted); }
+  .bar { transition: opacity 0.12s; cursor: pointer; }
+  .bar:hover { opacity: 0.75; }
+  .bar.selected { stroke: var(--text); stroke-width: 1.2; }
   .news-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 12px; }
   .news-col h2 { margin-top: 0; }
   .news-list { list-style: none; padding: 0; margin: 0; }
@@ -387,6 +399,7 @@ export function renderHtml(snapshot, news) {
       <button data-range="5Y">5Y</button>
     </div>
     <div id="chart-host"><div class="chart-loading">불러오는 중…</div></div>
+    <div id="chart-detail" class="chart-detail" aria-live="polite">막대를 클릭하면 상세 정보가 여기 표시됩니다</div>
     <div id="chart-meta" class="chart-meta"></div>
   </div>
 </div>
@@ -397,13 +410,81 @@ export function renderHtml(snapshot, news) {
   var titleEl = document.getElementById("chart-title");
   var hostEl = document.getElementById("chart-host");
   var metaEl = document.getElementById("chart-meta");
+  var detailEl = document.getElementById("chart-detail");
   var tabs = document.getElementById("range-tabs");
-  var current = { id: null, label: null, range: "1M" };
+  var current = { id: null, label: null, range: "1M", series: [], unit: "" };
+
+  function fmtNum(v) {
+    if (!isFinite(v)) return "—";
+    if (Math.abs(v) >= 1000) return v.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+    return v.toFixed(2);
+  }
+  function fmtVal(v, unit) {
+    var s = fmtNum(v);
+    if (unit === "원") return s + " 원";
+    if (unit === "$") return "$" + s;
+    if (unit === "HK$") return "HK$" + s;
+    if (unit) return s + unit;
+    return s;
+  }
+  function dateAgo(dateStr) {
+    var t = new Date(dateStr).getTime();
+    if (!isFinite(t)) return "";
+    var days = Math.round((Date.now() - t) / 86400000);
+    if (days <= 0) return "오늘";
+    if (days === 1) return "어제";
+    if (days < 7) return days + "일 전";
+    if (days < 30) return Math.floor(days/7) + "주 " + (days%7 ? (days%7)+"일 ":"") + "전 (" + days + "일)";
+    if (days < 365) {
+      var m = Math.floor(days/30); var rd = days - m*30;
+      return m + "개월 " + (rd ? rd+"일 ":"") + "전 (" + days + "일)";
+    }
+    var y = Math.floor(days/365); var rmd = days - y*365; var rmm = Math.floor(rmd/30);
+    return y + "년 " + (rmm ? rmm+"개월 ":"") + "전 (" + days + "일)";
+  }
+  function resetDetail() {
+    detailEl.className = "chart-detail placeholder";
+    detailEl.textContent = "막대를 클릭하면 상세 정보가 여기 표시됩니다";
+  }
+  function showDetail(i) {
+    var s = current.series; if (!s[i]) return;
+    var p = s[i];
+    var prev = i > 0 ? s[i-1] : null;
+    var first = s[0];
+    var dPrev = prev ? p.value - prev.value : 0;
+    var dPrevPct = prev && prev.value ? (dPrev / prev.value) * 100 : 0;
+    var dFirst = p.value - first.value;
+    var dFirstPct = first.value ? (dFirst / first.value) * 100 : 0;
+    function chgChip(pct, abs, label) {
+      var dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+      var arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "·";
+      return '<span class="cd-chg ' + dir + '">' + arrow + " " + label + " " + (pct>=0?"+":"−") + Math.abs(pct).toFixed(2) + "%</span>";
+    }
+    detailEl.className = "chart-detail";
+    detailEl.innerHTML =
+      '<span class="cd-date">' + p.date + "</span>" +
+      '<span class="cd-ago">' + dateAgo(p.date) + "</span>" +
+      '<span class="cd-value">' + fmtVal(p.value, current.unit) + "</span>" +
+      (prev ? chgChip(dPrevPct, dPrev, "전일") : "") +
+      chgChip(dFirstPct, dFirst, "기간 시작 대비");
+  }
 
   function open(id, label) {
-    current.id = id; current.label = label; current.range = "1M";
+    current.id = id; current.label = label; current.range = "1M"; current.series = []; current.unit = "";
+    var card = document.querySelector('[data-series-id="' + id + '"]');
+    if (card) {
+      var v = card.querySelector(".value");
+      if (v) {
+        var t = v.textContent || "";
+        if (/원/.test(t)) current.unit = "원";
+        else if (/HK\$/.test(t)) current.unit = "HK$";
+        else if (/^\$/.test(t.trim())) current.unit = "$";
+        else if (/%/.test(t)) current.unit = "%";
+      }
+    }
     setActiveTab("1M");
     titleEl.textContent = label;
+    resetDetail();
     modal.classList.remove("hidden");
     load();
   }
@@ -416,50 +497,85 @@ export function renderHtml(snapshot, news) {
   async function load() {
     hostEl.innerHTML = '<div class="chart-loading">불러오는 중…</div>';
     metaEl.textContent = "";
+    resetDetail();
     try {
       var res = await fetch("/api/series?id=" + encodeURIComponent(current.id) + "&range=" + current.range);
       var data = await res.json();
       if (!res.ok || data.error) throw new Error(data.error || "HTTP " + res.status);
       var s = data.series || [];
       if (!s.length) { hostEl.innerHTML = '<div class="chart-loading">데이터 없음</div>'; return; }
+      current.series = s;
       hostEl.innerHTML = drawSvg(s);
       var first = s[0].date, last = s[s.length - 1].date;
-      metaEl.textContent = s.length + " 포인트 · " + first + " ~ " + last;
+      metaEl.textContent = s.length + " 포인트 · " + first + " ~ " + last + " · 막대 클릭 → 상세";
+      attachBarHandlers();
     } catch (e) {
       hostEl.innerHTML = '<div class="chart-loading">오류: ' + (e.message || e) + '</div>';
     }
   }
+  function attachBarHandlers() {
+    var bars = hostEl.querySelectorAll("rect.bar");
+    bars.forEach(function (b) {
+      b.addEventListener("click", function () {
+        bars.forEach(function (x) { x.classList.remove("selected"); });
+        b.classList.add("selected");
+        showDetail(parseInt(b.getAttribute("data-i"), 10));
+      });
+    });
+  }
   function drawSvg(series) {
     var W = 760, H = 320, P = { top: 14, right: 14, bottom: 30, left: 56 };
+    var n = series.length;
     var ys = series.map(function (p) { return p.value; });
     var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    // Bars: include 0 baseline if data is all positive/negative; otherwise pad
+    var allPos = yMin >= 0;
+    var allNeg = yMax <= 0;
     var pad = (yMax - yMin) * 0.06 || Math.abs(yMax) * 0.02 || 1;
-    var y0 = yMin - pad, y1 = yMax + pad;
-    var n = series.length;
-    var sx = function (i) { return P.left + (n <= 1 ? 0 : (i / (n - 1)) * (W - P.left - P.right)); };
-    var sy = function (v) { return H - P.bottom - ((v - y0) / (y1 - y0 || 1)) * (H - P.top - P.bottom); };
-    var path = "";
+    var y0 = allPos ? Math.min(0, yMin) : yMin - pad;
+    var y1 = allNeg ? Math.max(0, yMax) : yMax + pad;
+    if (y0 === y1) y1 = y0 + 1;
+    var plotW = W - P.left - P.right;
+    var plotH = H - P.top - P.bottom;
+    var slot = plotW / Math.max(n, 1);
+    var bw = Math.max(1, Math.min(slot - 1, slot * 0.78));
+    var sy = function (v) { return P.top + (1 - (v - y0) / (y1 - y0)) * plotH; };
+    var baselineY = sy(0);
+    var firstVal = series[0].value, lastVal = series[n - 1].value;
+    var trendUp = lastVal >= firstVal;
+    var upColor = "#22c55e", downColor = "#ef4444";
+    var defaultColor = trendUp ? upColor : downColor;
+    var bars = "";
     for (var i = 0; i < n; i++) {
-      path += (i === 0 ? "M" : "L") + sx(i).toFixed(1) + " " + sy(series[i].value).toFixed(1) + " ";
+      var v = series[i].value;
+      var x = P.left + i * slot + (slot - bw) / 2;
+      var top = sy(Math.max(v, 0));
+      var bot = sy(Math.min(v, 0));
+      var h = Math.max(0.5, bot - top);
+      // Per-bar color: vs previous bar (rises green, falls red); first bar uses trend color
+      var color = defaultColor;
+      if (i > 0) {
+        var prev = series[i-1].value;
+        color = v >= prev ? upColor : downColor;
+      }
+      bars += '<rect class="bar" data-i="' + i + '" x="' + x.toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + h.toFixed(1) + '" fill="' + color + '" rx="1"><title>' + series[i].date + " · " + (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2)) + '</title></rect>';
     }
-    var areaPath = path + "L" + sx(n - 1).toFixed(1) + " " + (H - P.bottom) + " L" + sx(0).toFixed(1) + " " + (H - P.bottom) + " Z";
     var ticks = 4;
     var grid = "";
     for (var t = 0; t <= ticks; t++) {
-      var v = y0 + (t / ticks) * (y1 - y0);
-      var y = sy(v);
-      grid += '<line x1="' + P.left + '" y1="' + y.toFixed(1) + '" x2="' + (W - P.right) + '" y2="' + y.toFixed(1) + '" stroke="#232a44" stroke-width="0.5"/>';
-      grid += '<text x="' + (P.left - 8) + '" y="' + (y + 4).toFixed(1) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2)) + '</text>';
+      var gv = y0 + (t / ticks) * (y1 - y0);
+      var gy = sy(gv);
+      grid += '<line x1="' + P.left + '" y1="' + gy.toFixed(1) + '" x2="' + (W - P.right) + '" y2="' + gy.toFixed(1) + '" stroke="#232a44" stroke-width="0.5"/>';
+      grid += '<text x="' + (P.left - 8) + '" y="' + (gy + 4).toFixed(1) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + (Math.abs(gv) >= 1000 ? gv.toFixed(0) : gv.toFixed(2)) + '</text>';
     }
+    var zeroLine = (y0 < 0 && y1 > 0)
+      ? '<line x1="' + P.left + '" y1="' + baselineY.toFixed(1) + '" x2="' + (W - P.right) + '" y2="' + baselineY.toFixed(1) + '" stroke="#8a93a6" stroke-width="0.8" stroke-dasharray="3 3"/>'
+      : "";
     var first = series[0].date, last = series[n - 1].date;
-    var firstVal = series[0].value, lastVal = series[n - 1].value;
-    var trendUp = lastVal >= firstVal;
-    var stroke = trendUp ? "#22c55e" : "#ef4444";
-    var fill = trendUp ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)";
     return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" class="chart-svg">' +
       grid +
-      '<path d="' + areaPath + '" fill="' + fill + '" stroke="none"/>' +
-      '<path d="' + path + '" fill="none" stroke="' + stroke + '" stroke-width="1.8" stroke-linejoin="round"/>' +
+      bars +
+      zeroLine +
       '<text x="' + P.left + '" y="' + (H - 10) + '" fill="#8a93a6" font-size="11">' + first + '</text>' +
       '<text x="' + (W - P.right) + '" y="' + (H - 10) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + last + '</text>' +
       '</svg>';

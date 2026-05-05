@@ -70,12 +70,17 @@ function rangeBar(label, st, current, unit, pos, badge) {
   const tag = badge?.tag || "";
   return `
     <div class="rng${cls}">
-      <span class="rng-label">${label}${tag}</span>
-      <span class="rng-low" title="${escape(st.loDate || '')} 저점">${lowStr}</span>
-      <span class="rng-track">
-        <span class="rng-marker" style="left:${pos.toFixed(1)}%"></span>
-      </span>
-      <span class="rng-high" title="${escape(st.hiDate || '')} 고점">${hiStr}</span>
+      <div class="rng-head">
+        <span class="rng-label">${label}</span>
+        ${tag}
+      </div>
+      <div class="rng-body">
+        <span class="rng-low" title="${escape(st.loDate || '')} 저점">${lowStr}</span>
+        <span class="rng-track">
+          <span class="rng-marker" style="left:${pos.toFixed(1)}%"></span>
+        </span>
+        <span class="rng-high" title="${escape(st.hiDate || '')} 고점">${hiStr}</span>
+      </div>
     </div>`;
 }
 
@@ -308,12 +313,14 @@ export function renderHtml(snapshot, news) {
   .reason-ic { flex-shrink: 0; opacity: 0.85; }
   .reason-text { flex: 1; min-width: 0; }
   .reason-source { color: var(--muted); font-size: 10px; flex-shrink: 0; opacity: 0.75; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
-  .stats { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 5px; }
-  .rng { display: grid; grid-template-columns: minmax(56px, auto) minmax(0, auto) 1fr minmax(0, auto); align-items: center; gap: 6px; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--muted); padding: 3px 5px; border-radius: 5px; }
-  .rng-label { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; font-size: 9px; display: flex; align-items: center; gap: 4px; }
-  .rng-low { color: var(--down); }
-  .rng-high { color: var(--up); text-align: right; }
-  .rng-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; }
+  .stats { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 6px; }
+  .rng { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-radius: 5px; }
+  .rng-head { display: flex; align-items: center; gap: 6px; min-height: 13px; }
+  .rng-label { color: var(--muted); font-weight: 700; letter-spacing: 0.04em; font-size: 9px; }
+  .rng-body { display: grid; grid-template-columns: minmax(40px, max-content) 1fr minmax(40px, max-content); align-items: center; gap: 8px; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .rng-low { color: var(--down); white-space: nowrap; }
+  .rng-high { color: var(--up); text-align: right; white-space: nowrap; }
+  .rng-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; min-width: 0; }
   .rng-marker { position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--text); transform: translateX(-50%); border: 1.5px solid var(--card); box-shadow: 0 0 0 1px var(--text); }
   .rng-tag { font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.02em; white-space: nowrap; line-height: 1.3; }
   .rng-tag.high { background: rgba(34,197,94,0.25); color: var(--up); }

@@ -17,6 +17,7 @@ Repo: https://github.com/k23380508/mp1
 | 차트 모드 추가/제거 (값/변화율 외) | render.js #mode-tabs HTML, current.mode 기본값, drawSvg 분기, redraw() 호출 경로, .mode-tabs CSS, 모드별 Y축 스케일링 (값=tight zoom yMin~yMax+pad / 변화율=symmetric ±max) |
 | Alert 임계값 변경 (render.js `ALERT_PCT`) | 동시에 모든 카드 색상/pulse 영향, 사용자 인지 균형 (너무 낮으면 노이즈, 너무 높으면 무의미). 카드별 차등 필요시 alertClass()를 region/id 기반으로 분기 |
 | Range bar 강조 임계값 변경 (statsBlock `NEAR_HIGH`/`NEAR_LOW`) | rng-pulse-high/low CSS 임계 일치, soft-high/low 보조 임계, 카드 시각적 노이즈 ↔ 인지력 균형 |
+| Range bar 레이아웃 변경 (rng-head/rng-body 두 줄 구조) | rangeBar() HTML 구조, .rng/.rng-head/.rng-body CSS, .rng-track 1fr 보장 (라벨/태그 길이 무관 일정 비율 유지) |
 | Reason 추가/변경 (sources/reasons.js QUERIES, /api/reasons) | render.js reasonBlock 임계 (현재 ALERT_PCT 3%), 클라 JS loadReasons 호출, KV key `reason:v1:<id>` (TTL 30분) — query 변경 시 v2 bump, .reason-link CSS, CLAUDE.md 출처 표 |
 | stats schema 변경 (snapshot.js `STATS_WINDOWS`/`computeStats`) | render.js statsBlock/rangeBar 표시, KV 캐시 무효화 또는 key bump 필요, /api/snapshot consumers, 카드 높이 변동 (그리드 레이아웃 영향) |
 | 새 region/카테고리 추가 (예: KR_TECH, CN, EU 등) | render.js regionBadge() switch + .badge.<class> CSS, snapshot.js BUILDERS+order, series.js SERIES_REGISTRY, render.js CHARTABLE_IDS, render.js 새 섹션 HTML+heroIds/equityIds/...Ids 변수, **새 통화면 fmtValue() 분기** (예: HK$, ¥, €), CLAUDE.md 카드 표 |

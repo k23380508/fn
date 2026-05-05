@@ -253,6 +253,9 @@ function calendarEventRow(e) {
   const pv = e.previous ? `이전 ${escape(e.previous)}` : "";
   const ac = e.actual ? `<span class="cal-actual">실제 ${escape(e.actual)}</span>` : "";
   const meta = [ac, fc, pv].filter(Boolean).join(" · ");
+  const impactNote = e.marketImpact
+    ? `<span class="cal-mkt">${escape(e.marketImpact)}</span>`
+    : "";
   return `
     <li class="cal-row">
       <span class="cal-time">${escape(time)}</span>
@@ -260,6 +263,7 @@ function calendarEventRow(e) {
       <span class="cal-impact ${impactCls}">${impactLabel}</span>
       <span class="cal-title">${escape(e.title)}</span>
       ${meta ? `<span class="cal-meta">${meta}</span>` : ""}
+      ${impactNote}
     </li>`;
 }
 
@@ -523,6 +527,7 @@ export function renderHtml(snapshot, news, calendar) {
   .cal-title { color: var(--text); line-height: 1.35; }
   .cal-meta { grid-column: 4; color: var(--muted); font-size: 10px; margin-top: 2px; font-variant-numeric: tabular-nums; }
   .cal-actual { color: var(--up); font-weight: 600; }
+  .cal-mkt { grid-column: 4; font-size: 10px; margin-top: 3px; padding: 2px 6px; border-radius: 4px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--text); width: fit-content; line-height: 1.3; }
   @media (min-width: 640px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }

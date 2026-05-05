@@ -110,7 +110,7 @@ export default {
     if (url.pathname === "/api/reasons") {
       try {
         const idsParam = url.searchParams.get("ids") || "";
-        const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 10);
+        const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 14);
         if (!ids.length) return new Response(JSON.stringify({}), { headers: { "content-type": "application/json; charset=utf-8" } });
         const force = url.searchParams.get("fresh") === "1";
         const out = {};

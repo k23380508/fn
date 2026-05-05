@@ -14,14 +14,22 @@ function computeStats(series) {
     const days = STATS_WINDOWS[label];
     const cutoff = now - days * 86400000;
     let hi = -Infinity, lo = Infinity, hiDate = null, loDate = null, count = 0;
+    let startValue = null, startDate = null, endValue = null;
     for (const p of series) {
       const t = new Date(p.date).getTime();
       if (!Number.isFinite(t) || t < cutoff || !Number.isFinite(p.value)) continue;
       count++;
       if (p.value > hi) { hi = p.value; hiDate = p.date; }
       if (p.value < lo) { lo = p.value; loDate = p.date; }
+      if (startValue === null) { startValue = p.value; startDate = p.date; }
+      endValue = p.value;
     }
-    if (count > 0) out[label] = { hi, lo, hiDate, loDate, count };
+    if (count > 0) {
+      const changePct = (Number.isFinite(startValue) && startValue !== 0 && Number.isFinite(endValue))
+        ? ((endValue - startValue) / startValue) * 100
+        : null;
+      out[label] = { hi, lo, hiDate, loDate, count, startValue, startDate, endValue, changePct };
+    }
   }
   return Object.keys(out).length ? out : null;
 }
@@ -101,24 +109,32 @@ async function buildUsUnemp(env) {
   return { id: "us_unemp", region: "US", label: "美 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
 }
 
+async function buildYahooCard({ id, region, label, unit, symbol }) {
+  // Single 1y fetch for value + prev + stats — keeps subrequest count low
+  const q = await fetchYahooQuote(symbol, { range: "1y" });
+  const series = q.series || [];
+  const value = q.value;
+  const prev = series.length >= 2 ? series[series.length - 2].value : q.prev;
+  const out = { id, region, label, unit, value, prev, delta: deltaPair(value, prev), date: q.date };
+  const stats = computeStats(series);
+  if (stats) out.stats = stats;
+  return out;
+}
+
 async function buildKospi() {
-  const q = await fetchYahooQuote("^KS11");
-  return { id: "kospi", region: "KR", label: "KOSPI", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  return buildYahooCard({ id: "kospi", region: "KR", label: "KOSPI", unit: "", symbol: "^KS11" });
 }
 
 async function buildKosdaq() {
-  const q = await fetchYahooQuote("^KQ11");
-  return { id: "kosdaq", region: "KR", label: "KOSDAQ", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  return buildYahooCard({ id: "kosdaq", region: "KR", label: "KOSDAQ", unit: "", symbol: "^KQ11" });
 }
 
 async function buildNasdaq() {
-  const q = await fetchYahooQuote("^IXIC");
-  return { id: "nasdaq", region: "US", label: "NASDAQ", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  return buildYahooCard({ id: "nasdaq", region: "US", label: "NASDAQ", unit: "", symbol: "^IXIC" });
 }
 
 async function buildVix() {
-  const q = await fetchYahooQuote("^VIX");
-  return { id: "vix", region: "US", label: "VIX (변동성)", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  return buildYahooCard({ id: "vix", region: "US", label: "VIX (변동성)", unit: "", symbol: "^VIX" });
 }
 
 async function buildSp500(env) {
@@ -134,24 +150,20 @@ async function buildUsdKrw(env) {
 }
 
 async function buildGold() {
-  const q = await fetchYahooQuote("GC=F");
-  return { id: "gold", region: "CMD", label: "금 (Gold, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  return buildYahooCard({ id: "gold", region: "CMD", label: "금 (Gold, $/oz)", unit: "$", symbol: "GC=F" });
 }
 
 async function buildSilver() {
-  const q = await fetchYahooQuote("SI=F");
-  return { id: "silver", region: "CMD", label: "은 (Silver, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  return buildYahooCard({ id: "silver", region: "CMD", label: "은 (Silver, $/oz)", unit: "$", symbol: "SI=F" });
 }
 
 async function buildCopper() {
-  const q = await fetchYahooQuote("HG=F");
-  return { id: "copper", region: "CMD", label: "동 (Copper, $/lb)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  return buildYahooCard({ id: "copper", region: "CMD", label: "동 (Copper, $/lb)", unit: "$", symbol: "HG=F" });
 }
 
 async function buildBitcoin() {
   try {
-    const q = await fetchYahooQuote("BTC-USD");
-    return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+    return await buildYahooCard({ id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", symbol: "BTC-USD" });
   } catch (e) {
     const q = await fetchCoinGeckoPrice("bitcoin");
     return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
@@ -177,20 +189,7 @@ const BIGTECH = [
 ];
 
 function makeBigtechBuilder(t) {
-  return async () => {
-    // Fetch 1y range upfront so stats can be derived from the same response
-    // (avoids hitting Worker subrequest limit during enrichWithStats).
-    // Note: with range=1y, q.prev = chartPreviousClose ≈ 1 year ago value, NOT
-    // the previous trading day. Recompute prev from the last two series points.
-    const q = await fetchYahooQuote(t.symbol, { range: "1y" });
-    const series = q.series || [];
-    const value = q.value;
-    const prev = series.length >= 2 ? series[series.length - 2].value : q.prev;
-    const out = { id: t.id, region: t.region, label: t.label, unit: t.unit, value, prev, delta: deltaPair(value, prev), date: q.date };
-    const stats = computeStats(series);
-    if (stats) out.stats = stats;
-    return out;
-  };
+  return () => buildYahooCard({ id: t.id, region: t.region, label: t.label, unit: t.unit, symbol: t.symbol });
 }
 
 function buildSpread(usFedRow, krBaseRow) {

@@ -68,11 +68,20 @@ function rangeBar(label, st, current, unit, pos, badge) {
   const hiStr = escape(fmtValue(st.hi, unit));
   const cls = badge?.cls || "";
   const tag = badge?.tag || "";
+  let chgChip = "";
+  if (Number.isFinite(st.changePct)) {
+    const pct = st.changePct;
+    const dir = pct > 0 ? "up" : pct < 0 ? "down" : "flat";
+    const arrow = pct > 0 ? "▲" : pct < 0 ? "▼" : "·";
+    const sign = pct >= 0 ? "+" : "−";
+    chgChip = `<span class="rng-chg ${dir}" title="${escape(st.startDate || '')} 시작값 대비">${arrow} ${sign}${Math.abs(pct).toFixed(2)}%</span>`;
+  }
   return `
     <div class="rng${cls}">
       <div class="rng-head">
         <span class="rng-label">${label}</span>
         ${tag}
+        ${chgChip}
       </div>
       <div class="rng-body">
         <span class="rng-low" title="${escape(st.loDate || '')} 저점">${lowStr}</span>
@@ -137,13 +146,18 @@ function card(item, hero = false) {
     </article>`;
 }
 
+// Cards always given a reason regardless of alert threshold (사용자 관심 high)
+const ALWAYS_REASON_IDS = new Set(["gold", "silver", "copper", "btc"]);
+
 function reasonBlock(item) {
   // Empty placeholder — populated client-side via /api/reasons (lazy load)
-  // for cards that are alerting (큰 변동) to avoid Worker subrequest limit.
+  // for alerting cards (큰 변동) plus pinned commodity/crypto cards.
   if (item?.error) return "";
   const ALERT_PCT = 3;
   const pct = item?.delta?.pct;
-  if (!Number.isFinite(pct) || Math.abs(pct) < ALERT_PCT) return "";
+  const isAlerting = Number.isFinite(pct) && Math.abs(pct) >= ALERT_PCT;
+  const isAlways = ALWAYS_REASON_IDS.has(item.id);
+  if (!isAlerting && !isAlways) return "";
   return `<div class="reason-slot" data-reason-for="${escape(item.id)}"></div>`;
 }
 
@@ -323,6 +337,10 @@ export function renderHtml(snapshot, news) {
   .rng-track { position: relative; height: 3px; background: var(--border); border-radius: 2px; min-width: 0; }
   .rng-marker { position: absolute; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--text); transform: translateX(-50%); border: 1.5px solid var(--card); box-shadow: 0 0 0 1px var(--text); }
   .rng-tag { font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.02em; white-space: nowrap; line-height: 1.3; }
+  .rng-chg { font-size: 9px; font-weight: 700; font-variant-numeric: tabular-nums; margin-left: auto; white-space: nowrap; }
+  .rng-chg.up { color: var(--up); }
+  .rng-chg.down { color: var(--down); }
+  .rng-chg.flat { color: var(--muted); }
   .rng-tag.high { background: rgba(34,197,94,0.25); color: var(--up); }
   .rng-tag.low { background: rgba(239,68,68,0.25); color: var(--down); }
   .rng-tag.soft { opacity: 0.6; font-weight: 700; }
@@ -726,8 +744,8 @@ export function renderHtml(snapshot, news) {
     var slots = Array.prototype.slice.call(document.querySelectorAll(".reason-slot[data-reason-for]"));
     if (!slots.length) return;
     var ids = slots.map(function (s) { return s.dataset.reasonFor; }).filter(Boolean);
-    // dedupe + cap to 10 (server also caps)
-    ids = Array.from(new Set(ids)).slice(0, 10);
+    // dedupe + cap to 14 (server also caps)
+    ids = Array.from(new Set(ids)).slice(0, 14);
     if (!ids.length) return;
     fetch("/api/reasons?ids=" + encodeURIComponent(ids.join(",")))
       .then(function (r) { return r.json(); })

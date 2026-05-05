@@ -127,8 +127,19 @@ function card(item, hero = false) {
       <div class="value">${escape(fmtValue(item.value, item.unit))}</div>
       <div class="delta ${d.dir}">${escape(d.text)}</div>
       <div class="meta">기준 ${escape(item.date || "")}</div>
+      ${reasonBlock(item)}
       ${statsBlock(item)}
     </article>`;
+}
+
+function reasonBlock(item) {
+  // Empty placeholder — populated client-side via /api/reasons (lazy load)
+  // for cards that are alerting (큰 변동) to avoid Worker subrequest limit.
+  if (item?.error) return "";
+  const ALERT_PCT = 3;
+  const pct = item?.delta?.pct;
+  if (!Number.isFinite(pct) || Math.abs(pct) < ALERT_PCT) return "";
+  return `<div class="reason-slot" data-reason-for="${escape(item.id)}"></div>`;
 }
 
 function fmtPubDate(s) {
@@ -292,6 +303,11 @@ export function renderHtml(snapshot, news) {
   .card.alert-up::before { background: rgba(34,197,94,0.18); color: var(--up); }
   .card.alert-down::before { background: rgba(239,68,68,0.18); color: var(--down); }
   .card { position: relative; }
+  .reason-link { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; padding: 7px 9px; background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 6px; text-decoration: none; color: var(--muted); font-size: 11px; line-height: 1.4; transition: background 0.15s, border-color 0.15s; }
+  .reason-link:hover { background: rgba(59,130,246,0.10); border-color: var(--kr); color: var(--text); }
+  .reason-ic { flex-shrink: 0; opacity: 0.85; }
+  .reason-text { flex: 1; min-width: 0; }
+  .reason-source { color: var(--muted); font-size: 10px; flex-shrink: 0; opacity: 0.75; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
   .stats { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); display: flex; flex-direction: column; gap: 5px; }
   .rng { display: grid; grid-template-columns: minmax(56px, auto) minmax(0, auto) 1fr minmax(0, auto); align-items: center; gap: 6px; font-size: 10px; font-variant-numeric: tabular-nums; color: var(--muted); padding: 3px 5px; border-radius: 5px; }
   .rng-label { color: var(--muted); font-weight: 600; letter-spacing: 0.04em; font-size: 9px; display: flex; align-items: center; gap: 4px; }
@@ -692,6 +708,44 @@ export function renderHtml(snapshot, news) {
       if (card) { e.preventDefault(); open(card.dataset.seriesId, card.dataset.label); }
     }
   });
+})();
+
+// Lazy-load 배경 뉴스 reason for alerting cards (큰 변동만)
+(function () {
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function loadReasons() {
+    var slots = Array.prototype.slice.call(document.querySelectorAll(".reason-slot[data-reason-for]"));
+    if (!slots.length) return;
+    var ids = slots.map(function (s) { return s.dataset.reasonFor; }).filter(Boolean);
+    // dedupe + cap to 10 (server also caps)
+    ids = Array.from(new Set(ids)).slice(0, 10);
+    if (!ids.length) return;
+    fetch("/api/reasons?ids=" + encodeURIComponent(ids.join(",")))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        slots.forEach(function (slot) {
+          var id = slot.dataset.reasonFor;
+          var r = data && data[id];
+          if (!r || !r.headline) return;
+          var koBadge = r.translated ? '<span class="ko-badge" title="한국어 자동 번역">KO</span>' : "";
+          var src = r.source ? '<span class="reason-source">' + escapeHtml(r.source) + '</span>' : "";
+          var attrs = r.link
+            ? 'href="' + escapeHtml(r.link) + '" target="_blank" rel="noopener noreferrer"'
+            : "";
+          var tag = r.link ? "a" : "div";
+          slot.innerHTML = "<" + tag + " " + attrs + ' class="reason-link" onclick="event.stopPropagation()" title="배경 뉴스 원문 보기">' +
+            '<span class="reason-ic">📰</span>' +
+            '<span class="reason-text">' + koBadge + escapeHtml(r.headline) + '</span>' +
+            src +
+            '</' + tag + '>';
+        });
+      })
+      .catch(function () { /* silent */ });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", loadReasons);
+  else loadReasons();
 })();
 </script>
 </body>

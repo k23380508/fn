@@ -179,10 +179,15 @@ const BIGTECH = [
 function makeBigtechBuilder(t) {
   return async () => {
     // Fetch 1y range upfront so stats can be derived from the same response
-    // (avoids hitting Worker subrequest limit during enrichWithStats)
+    // (avoids hitting Worker subrequest limit during enrichWithStats).
+    // Note: with range=1y, q.prev = chartPreviousClose ≈ 1 year ago value, NOT
+    // the previous trading day. Recompute prev from the last two series points.
     const q = await fetchYahooQuote(t.symbol, { range: "1y" });
-    const out = { id: t.id, region: t.region, label: t.label, unit: t.unit, value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
-    const stats = computeStats(q.series || []);
+    const series = q.series || [];
+    const value = q.value;
+    const prev = series.length >= 2 ? series[series.length - 2].value : q.prev;
+    const out = { id: t.id, region: t.region, label: t.label, unit: t.unit, value, prev, delta: deltaPair(value, prev), date: q.date };
+    const stats = computeStats(series);
     if (stats) out.stats = stats;
     return out;
   };

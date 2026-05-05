@@ -3,12 +3,14 @@ import { renderHtml } from "./render.js";
 import { getCached, putCached } from "./kv.js";
 import { fetchSeries, RANGES, SERIES_REGISTRY } from "./series.js";
 import { buildNews } from "./sources/news.js";
+import { buildReasonsFor } from "./sources/reasons.js";
 
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
 const NEWS_KEY = "news:v4:latest";
 const NEWS_TTL = 900;      // 15 minutes
+const REASON_TTL = 1800;   // 30 minutes per id
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {
   if (!force) {
@@ -102,6 +104,38 @@ export default {
           status: 500,
           headers: { "content-type": "application/json; charset=utf-8" },
         });
+      }
+    }
+
+    if (url.pathname === "/api/reasons") {
+      try {
+        const idsParam = url.searchParams.get("ids") || "";
+        const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 10);
+        if (!ids.length) return new Response(JSON.stringify({}), { headers: { "content-type": "application/json; charset=utf-8" } });
+        const force = url.searchParams.get("fresh") === "1";
+        const out = {};
+        const missing = [];
+        for (const id of ids) {
+          if (!force) {
+            const cached = await getCached(`reason:v1:${id}`, env);
+            if (cached?.headline) { out[id] = cached; continue; }
+          }
+          missing.push(id);
+        }
+        if (missing.length) {
+          const built = await buildReasonsFor(missing, env);
+          for (const id of missing) {
+            if (built[id]) {
+              out[id] = built[id];
+              await putCached(`reason:v1:${id}`, built[id], env, REASON_TTL);
+            }
+          }
+        }
+        return new Response(JSON.stringify(out), {
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { "content-type": "application/json; charset=utf-8" } });
       }
     }
 

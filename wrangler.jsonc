@@ -3,5 +3,12 @@
   "main": "src/index.js",
   "workers_dev": true,
   "preview_urls": true,
-  "compatibility_date": "2026-05-02"
+  "compatibility_date": "2026-05-02",
+  "kv_namespaces": [
+    {
+      "binding": "MACRO_CACHE",
+      "id": "4b024d35834f4d85b912e903fc785e36",
+      "preview_id": "980cbc39bbc94d0c89cbe6397d390c0c"
+    }
+  ]
 }

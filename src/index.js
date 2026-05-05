@@ -1,5 +1,19 @@
 import { buildSnapshot } from "./snapshot.js";
 import { renderHtml } from "./render.js";
+import { getCached, putCached } from "./kv.js";
+
+const SNAPSHOT_KEY = "snapshot:latest";
+const SNAPSHOT_TTL = 5400; // 90 minutes
+
+async function getOrBuildSnapshot(env, { force = false } = {}) {
+  if (!force) {
+    const cached = await getCached(SNAPSHOT_KEY, env);
+    if (cached?.generatedAt) return { snapshot: cached, source: "kv" };
+  }
+  const fresh = await buildSnapshot(env);
+  await putCached(SNAPSHOT_KEY, fresh, env, SNAPSHOT_TTL);
+  return { snapshot: fresh, source: "fresh" };
+}
 
 export default {
   async fetch(request, env) {
@@ -11,11 +25,13 @@ export default {
 
     if (url.pathname === "/api/snapshot") {
       try {
-        const snap = await buildSnapshot(env);
-        return new Response(JSON.stringify(snap, null, 2), {
+        const force = url.searchParams.get("fresh") === "1";
+        const { snapshot, source } = await getOrBuildSnapshot(env, { force });
+        return new Response(JSON.stringify(snapshot, null, 2), {
           headers: {
             "content-type": "application/json; charset=utf-8",
             "cache-control": "public, max-age=60",
+            "x-cache": source,
           },
         });
       } catch (e) {
@@ -28,12 +44,13 @@ export default {
 
     if (url.pathname === "/" || url.pathname === "") {
       try {
-        const snap = await buildSnapshot(env);
-        const html = renderHtml(snap);
+        const { snapshot, source } = await getOrBuildSnapshot(env);
+        const html = renderHtml(snapshot);
         return new Response(html, {
           headers: {
             "content-type": "text/html; charset=utf-8",
             "cache-control": "public, max-age=60",
+            "x-cache": source,
           },
         });
       } catch (e) {

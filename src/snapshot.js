@@ -27,15 +27,22 @@ function computeStats(series) {
 }
 
 async function enrichWithStats(items, env) {
+  const FALLBACK_RANGES = ["1Y", "6M", "3M", "1M"];
   await Promise.all(items.map(async (item) => {
-    if (item.error || !SERIES_REGISTRY[item.id]) return;
-    try {
-      const series = await fetchSeries(item.id, "1Y", env);
-      const stats = computeStats(series);
-      if (stats) item.stats = stats;
-    } catch {
-      // best-effort; leave stats undefined
+    if (item.error || item.stats || !SERIES_REGISTRY[item.id]) return; // skip if already populated by builder
+    for (const r of FALLBACK_RANGES) {
+      try {
+        const series = await fetchSeries(item.id, r, env);
+        const stats = computeStats(series);
+        if (stats && Object.keys(stats).length) {
+          item.stats = stats;
+          return;
+        }
+      } catch {
+        // try next range
+      }
     }
+    // best-effort; leave stats undefined if all ranges fail
   }));
 }
 
@@ -171,8 +178,13 @@ const BIGTECH = [
 
 function makeBigtechBuilder(t) {
   return async () => {
-    const q = await fetchYahooQuote(t.symbol);
-    return { id: t.id, region: t.region, label: t.label, unit: t.unit, value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+    // Fetch 1y range upfront so stats can be derived from the same response
+    // (avoids hitting Worker subrequest limit during enrichWithStats)
+    const q = await fetchYahooQuote(t.symbol, { range: "1y" });
+    const out = { id: t.id, region: t.region, label: t.label, unit: t.unit, value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+    const stats = computeStats(q.series || []);
+    if (stats) out.stats = stats;
+    return out;
   };
 }
 

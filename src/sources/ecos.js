@@ -6,21 +6,26 @@ function pad2(n) {
 
 function periodRange(freq, count) {
   const now = new Date();
-  const end = [];
-  const start = [];
   if (freq === "M") {
-    const y = now.getUTCFullYear();
-    const m = now.getUTCMonth() + 1;
-    end.push(`${y}${pad2(m)}`);
-    const sy = m - count <= 0 ? y - 1 : y;
-    const sm = ((m - count - 1 + 12) % 12) + 1;
-    start.push(`${sy - (m - count <= -12 ? 1 : 0)}${pad2(sm)}`);
-  } else if (freq === "D") {
-    end.push(`${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}`);
-    const past = new Date(now.getTime() - count * 24 * 60 * 60 * 1000);
-    start.push(`${past.getUTCFullYear()}${pad2(past.getUTCMonth() + 1)}${pad2(past.getUTCDate())}`);
+    const yEnd = now.getUTCFullYear();
+    const mEnd = now.getUTCMonth() + 1;
+    const totalEnd = yEnd * 12 + (mEnd - 1);
+    const totalStart = totalEnd - (count - 1);
+    const yStart = Math.floor(totalStart / 12);
+    const mStart = (totalStart % 12) + 1;
+    return { start: `${yStart}${pad2(mStart)}`, end: `${yEnd}${pad2(mEnd)}` };
   }
-  return { start: start[0], end: end[0] };
+  if (freq === "D") {
+    const end = `${now.getUTCFullYear()}${pad2(now.getUTCMonth() + 1)}${pad2(now.getUTCDate())}`;
+    const past = new Date(now.getTime() - count * 24 * 60 * 60 * 1000);
+    const start = `${past.getUTCFullYear()}${pad2(past.getUTCMonth() + 1)}${pad2(past.getUTCDate())}`;
+    return { start, end };
+  }
+  if (freq === "Y") {
+    const yEnd = now.getUTCFullYear();
+    return { start: `${yEnd - count + 1}`, end: `${yEnd}` };
+  }
+  throw new Error(`unsupported freq: ${freq}`);
 }
 
 export async function fetchEcos(tableCode, itemCode, freq, env, { count = 24 } = {}) {
@@ -40,7 +45,7 @@ export async function fetchEcos(tableCode, itemCode, freq, env, { count = 24 } =
 }
 
 export async function fetchEcosYoY(tableCode, itemCode, env) {
-  const obs = await fetchEcos(tableCode, itemCode, "M", env, { count: 14 });
+  const obs = await fetchEcos(tableCode, itemCode, "M", env, { count: 16 });
   if (obs.length < 13) throw new Error(`ECOS ${tableCode}/${itemCode} insufficient data for YoY`);
   const latest = obs[0];
   const yearAgo = obs[12];

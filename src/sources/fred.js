@@ -13,7 +13,7 @@ export async function fetchFred(seriesId, env, { limit = 2 } = {}) {
 
 export async function fetchFredYoY(seriesId, env) {
   if (!env.FRED_API_KEY) throw new Error("FRED_API_KEY not set");
-  const url = `${FRED_BASE}?series_id=${encodeURIComponent(seriesId)}&api_key=${env.FRED_API_KEY}&file_type=json&sort_order=desc&limit=14`;
+  const url = `${FRED_BASE}?series_id=${encodeURIComponent(seriesId)}&api_key=${env.FRED_API_KEY}&file_type=json&sort_order=desc&limit=16`;
   const res = await fetch(url, { cf: { cacheTtl: 300, cacheEverything: true } });
   if (!res.ok) throw new Error(`FRED ${seriesId} HTTP ${res.status}`);
   const json = await res.json();

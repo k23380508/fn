@@ -1,7 +1,7 @@
 const YAHOO_BASE = "https://query1.finance.yahoo.com/v8/finance/chart";
 
-export async function fetchYahooQuote(symbol) {
-  const url = `${YAHOO_BASE}/${encodeURIComponent(symbol)}?interval=1d&range=5d`;
+export async function fetchYahooQuote(symbol, { range = "3mo", interval = "1d" } = {}) {
+  const url = `${YAHOO_BASE}/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
   const res = await fetch(url, {
     cf: { cacheTtl: 60, cacheEverything: true },
     headers: { "User-Agent": "Mozilla/5.0 (compatible; mp1-worker/1.0)" },
@@ -11,6 +11,12 @@ export async function fetchYahooQuote(symbol) {
   const result = json?.chart?.result?.[0];
   if (!result) throw new Error(`Yahoo ${symbol} no result`);
   const meta = result.meta || {};
+  const timestamps = result.timestamp || [];
+  const closes = result.indicators?.quote?.[0]?.close || [];
+  const series = timestamps
+    .map((t, i) => ({ date: new Date(t * 1000).toISOString().slice(0, 10), value: closes[i] }))
+    .filter((p) => Number.isFinite(p.value));
+
   const value = meta.regularMarketPrice;
   const prev = meta.chartPreviousClose ?? meta.previousClose;
   if (!Number.isFinite(value) || !Number.isFinite(prev)) {
@@ -19,5 +25,5 @@ export async function fetchYahooQuote(symbol) {
   const ts = Number.isFinite(meta.regularMarketTime)
     ? new Date(meta.regularMarketTime * 1000).toISOString()
     : new Date().toISOString();
-  return { date: ts, value, prev };
+  return { date: ts, value, prev, series };
 }

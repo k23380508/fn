@@ -3,6 +3,8 @@ import { fetchEcos, fetchEcosYoY } from "./sources/ecos.js";
 import { fetchYahooQuote } from "./sources/yahoo.js";
 import { fetchCoinGeckoPrice } from "./sources/coingecko.js";
 
+const SPARK_LEN = 60;
+
 function deltaPair(latest, prev) {
   if (!Number.isFinite(latest) || !Number.isFinite(prev)) return null;
   return { abs: latest - prev, pct: prev === 0 ? null : ((latest - prev) / prev) * 100 };
@@ -12,88 +14,106 @@ function pickLatestPrev(series) {
   return { latest: series[0]?.value, prev: series[1]?.value, date: series[0]?.date };
 }
 
+function sparkFromDescObs(obs, n = SPARK_LEN) {
+  return obs.slice(0, n).map((o) => o.value).reverse();
+}
+
+function sparkFromAscSeries(series, n = SPARK_LEN) {
+  return series.slice(-n).map((o) => o.value);
+}
+
 async function buildKrBaseRate(env) {
-  const obs = await fetchEcos("722Y001", "0101000", "M", env, { count: 24 });
+  const obs = await fetchEcos("722Y001", "0101000", "M", env, { count: 36 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_base_rate", region: "KR", label: "한국 기준금리", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "kr_base_rate", region: "KR", label: "한국 기준금리", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs, 36) };
 }
 
 async function buildUsFedFunds(env) {
-  const obs = await fetchFred("DFF", env, { limit: 2 });
+  const obs = await fetchFred("DFF", env, { limit: SPARK_LEN });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_fed_funds", region: "US", label: "美 연준 기준금리 (DFF)", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "us_fed_funds", region: "US", label: "美 연준 기준금리 (DFF)", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs) };
 }
 
 async function buildKrCpiYoy(env) {
   const yoy = await fetchEcosYoY("901Y009", "0", env);
-  return { id: "kr_cpi_yoy", region: "KR", label: "한국 CPI (전년동월비)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date };
+  const obs = await fetchEcos("901Y009", "0", "M", env, { count: 30 });
+  const yoySeries = [];
+  for (let i = 0; i + 12 < obs.length; i++) {
+    yoySeries.push(((obs[i].value - obs[i + 12].value) / obs[i + 12].value) * 100);
+  }
+  return { id: "kr_cpi_yoy", region: "KR", label: "한국 CPI (전년동월비)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date, spark: yoySeries.reverse() };
 }
 
 async function buildUsCpiYoy(env) {
   const yoy = await fetchFredYoY("CPIAUCSL", env);
-  return { id: "us_cpi_yoy", region: "US", label: "美 CPI (YoY)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date };
+  const obs = await fetchFred("CPIAUCSL", env, { limit: 30 });
+  const yoySeries = [];
+  for (let i = 0; i + 12 < obs.length; i++) {
+    yoySeries.push(((obs[i].value - obs[i + 12].value) / obs[i + 12].value) * 100);
+  }
+  return { id: "us_cpi_yoy", region: "US", label: "美 CPI (YoY)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date, spark: yoySeries.reverse() };
 }
 
 async function buildKr10y(env) {
-  const obs = await fetchEcos("817Y002", "010230000", "D", env, { count: 30 });
+  const obs = await fetchEcos("817Y002", "010230000", "D", env, { count: 90 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs) };
 }
 
 async function buildUs10y(env) {
-  const obs = await fetchFred("DGS10", env, { limit: 5 });
+  const obs = await fetchFred("DGS10", env, { limit: SPARK_LEN });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_10y", region: "US", label: "美 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "us_10y", region: "US", label: "美 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs) };
 }
 
 async function buildKrUnemp(env) {
-  const obs = await fetchFred("LRHUTTTTKRM156S", env, { limit: 5 });
+  const obs = await fetchFred("LRHUTTTTKRM156S", env, { limit: 36 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_unemp", region: "KR", label: "한국 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "kr_unemp", region: "KR", label: "한국 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs, 36) };
 }
 
 async function buildUsUnemp(env) {
-  const obs = await fetchFred("UNRATE", env, { limit: 2 });
+  const obs = await fetchFred("UNRATE", env, { limit: 36 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_unemp", region: "US", label: "美 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "us_unemp", region: "US", label: "美 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs, 36) };
 }
 
 async function buildKospi() {
-  const q = await fetchYahooQuote("^KS11");
-  return { id: "kospi", region: "KR", label: "KOSPI", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  const q = await fetchYahooQuote("^KS11", { range: "3mo" });
+  return { id: "kospi", region: "KR", label: "KOSPI", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date, spark: sparkFromAscSeries(q.series) };
 }
 
 async function buildSp500(env) {
-  const obs = await fetchFred("SP500", env, { limit: 5 });
+  const obs = await fetchFred("SP500", env, { limit: SPARK_LEN });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "sp500", region: "US", label: "S&P 500", unit: "", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "sp500", region: "US", label: "S&P 500", unit: "", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs) };
 }
 
 async function buildUsdKrw(env) {
-  const obs = await fetchFred("DEXKOUS", env, { limit: 5 });
+  const obs = await fetchFred("DEXKOUS", env, { limit: SPARK_LEN });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "usd_krw", region: "FX", label: "USD/KRW", unit: "원", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "usd_krw", region: "FX", label: "USD/KRW", unit: "원", value: latest, prev, delta: deltaPair(latest, prev), date, spark: sparkFromDescObs(obs) };
 }
 
 async function buildGold() {
-  const q = await fetchYahooQuote("GC=F");
-  return { id: "gold", region: "CMD", label: "금 (Gold, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  const q = await fetchYahooQuote("GC=F", { range: "3mo" });
+  return { id: "gold", region: "CMD", label: "금 (Gold, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date, spark: sparkFromAscSeries(q.series) };
 }
 
 async function buildSilver() {
-  const q = await fetchYahooQuote("SI=F");
-  return { id: "silver", region: "CMD", label: "은 (Silver, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  const q = await fetchYahooQuote("SI=F", { range: "3mo" });
+  return { id: "silver", region: "CMD", label: "은 (Silver, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date, spark: sparkFromAscSeries(q.series) };
 }
 
 async function buildCopper() {
-  const q = await fetchYahooQuote("HG=F");
-  return { id: "copper", region: "CMD", label: "동 (Copper, $/lb)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  const q = await fetchYahooQuote("HG=F", { range: "3mo" });
+  return { id: "copper", region: "CMD", label: "동 (Copper, $/lb)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date, spark: sparkFromAscSeries(q.series) };
 }
 
 async function buildBitcoin() {
   try {
-    const q = await fetchYahooQuote("BTC-USD");
-    return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+    const q = await fetchYahooQuote("BTC-USD", { range: "3mo" });
+    return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date, spark: sparkFromAscSeries(q.series) };
   } catch (e) {
     const q = await fetchCoinGeckoPrice("bitcoin");
     return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };

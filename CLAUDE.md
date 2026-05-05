@@ -95,7 +95,7 @@ src/
 ## 바인딩 / 환경
 
 - KV: `MACRO_CACHE` (id `4b024d35834f4d85b912e903fc785e36`) — wrangler.jsonc, 변경 금지
-- AI: `env.AI` (Workers AI binding) — `@cf/meta/m2m100-1.2b` 영→한 뉴스 제목 번역
+- AI: 외부 AI 호출 없음. reason 분석은 `src/sources/reasons.js`의 `STATIC_ANALYSIS` 매핑 (개발자가 직접 작성, 갱신 시 KV key v3→v4 bump)
 - Secrets: ECOS API key, FRED API key (각 source에서 `env.*`로 참조 — `wrangler secret put`로 관리)
 - compatibility_date: 2026-05-02
 
@@ -111,6 +111,7 @@ npx wrangler tail mp1   # 라이브 로그
 
 ## 데이터 출처 / 정책
 
-- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS) · Cloudflare Workers AI (m2m100, 영→한 번역)
+- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS)
+- 외부 AI 호출 없음 (reason 분석은 정적 데이터, 영문 뉴스는 원문 그대로)
 - 추측 금지 — 출처에서 받은 값만 표시, fallback 없으면 "—"
 - 페이지 하단 출처 표기 유지

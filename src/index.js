@@ -8,9 +8,9 @@ import { buildReasonsFor } from "./sources/reasons.js";
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
-const NEWS_KEY = "news:v4:latest";
+const NEWS_KEY = "news:v5:latest";
 const NEWS_TTL = 900;      // 15 minutes
-const REASON_TTL = 1800;   // 30 minutes per id
+const REASON_TTL = 86400;  // 24 hours per id (static analysis stable for the day)
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {
   if (!force) {
@@ -117,22 +117,18 @@ export default {
         const missing = [];
         for (const id of ids) {
           if (!force) {
-            const cached = await getCached(`reason:v2:${id}`, env);
+            const cached = await getCached(`reason:v3:${id}`, env);
             if (cached?.headline) { out[id] = cached; continue; }
           }
           missing.push(id);
         }
         if (missing.length) {
-          // Look up each missing card's label/delta from cached snapshot so the
-          // LLM has context for the cause analysis.
-          const snap = await getCached(SNAPSHOT_KEY, env);
-          const itemsById = Object.fromEntries(((snap?.items) || []).map((i) => [i.id, i]));
-          const inputs = missing.map((id) => ({ id, item: itemsById[id] || null }));
+          const inputs = missing.map((id) => ({ id }));
           const built = await buildReasonsFor(inputs, env);
           for (const id of missing) {
             if (built[id]) {
               out[id] = built[id];
-              await putCached(`reason:v2:${id}`, built[id], env, REASON_TTL);
+              await putCached(`reason:v3:${id}`, built[id], env, REASON_TTL);
             }
           }
         }

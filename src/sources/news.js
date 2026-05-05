@@ -54,41 +54,19 @@ async function fetchRss(url, limit) {
   return items;
 }
 
-async function translateToKo(text, env) {
-  if (!env?.AI || !text) return null;
-  try {
-    const res = await env.AI.run("@cf/meta/m2m100-1.2b", {
-      text,
-      source_lang: "english",
-      target_lang: "korean",
-    });
-    const ko = res?.translated_text;
-    if (ko && typeof ko === "string" && ko.trim() && ko.trim() !== text.trim()) return ko.trim();
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-async function fetchSection(url, limit, { translate, env }) {
+async function fetchSection(url, limit) {
   const items = await fetchRss(url, limit);
-  if (!translate) {
-    return items.map((n) => ({ ...n, originalTitle: n.title }));
-  }
-  return Promise.all(items.map(async (n) => {
-    const ko = await translateToKo(n.title, env);
-    return { ...n, originalTitle: n.title, title: ko || n.title, translated: !!ko };
-  }));
+  return items.map((n) => ({ ...n, originalTitle: n.title, translated: false }));
 }
 
 export async function buildNews(env, { limit = 5 } = {}) {
   const [krRes, usRes, aiRes, krTechRes, usTechRes, cnTechRes] = await Promise.allSettled([
-    fetchSection(KR_URL, limit, { translate: false, env }),
-    fetchSection(US_URL, limit, { translate: true, env }),
-    fetchSection(AI_URL, limit, { translate: true, env }),
-    fetchSection(KR_TECH_URL, limit, { translate: false, env }),
-    fetchSection(US_TECH_URL, limit, { translate: true, env }),
-    fetchSection(CN_TECH_URL, limit, { translate: true, env }),
+    fetchSection(KR_URL, limit),
+    fetchSection(US_URL, limit),
+    fetchSection(AI_URL, limit),
+    fetchSection(KR_TECH_URL, limit),
+    fetchSection(US_TECH_URL, limit),
+    fetchSection(CN_TECH_URL, limit),
   ]);
   const pack = (r) => r.status === "fulfilled" ? r.value : { error: r.reason?.message || String(r.reason) };
   return {

@@ -470,7 +470,7 @@ export function renderHtml(snapshot, news) {
   </div>
 
   <footer>
-    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko · Google News · 번역: Cloudflare Workers AI (m2m100)</div>
+    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko · Google News</div>
     <div>본 페이지는 정보 제공 목적이며, 투자 권유나 자문이 아닙니다. 데이터는 출처에서 지연되어 제공될 수 있습니다.</div>
   </footer>
 </div>

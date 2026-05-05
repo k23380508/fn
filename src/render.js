@@ -9,25 +9,33 @@ function escape(s) {
 function fmtValue(v, unit) {
   if (!Number.isFinite(v)) return "—";
   const abs = Math.abs(v);
-  let s;
-  if (abs >= 1000) s = v.toLocaleString("ko-KR", { maximumFractionDigits: 2 });
-  else if (abs >= 100) s = v.toFixed(2);
-  else s = v.toFixed(2);
-  return unit === "원" ? `${s} ${unit}` : unit ? `${s}${unit}` : s;
+  const s = abs >= 1000
+    ? v.toLocaleString("ko-KR", { maximumFractionDigits: 2 })
+    : v.toFixed(2);
+  if (unit === "원") return `${s} ${unit}`;
+  if (unit === "$") return `$${s}`;
+  if (unit) return `${s}${unit}`;
+  return s;
 }
 
 function fmtDelta(delta, unit) {
   if (!delta || !Number.isFinite(delta.abs)) return { text: "—", dir: "flat" };
   const sign = delta.abs > 0 ? "▲" : delta.abs < 0 ? "▼" : "·";
   const dir = delta.abs > 0 ? "up" : delta.abs < 0 ? "down" : "flat";
-  const absStr = Math.abs(delta.abs).toFixed(2);
+  const absVal = Math.abs(delta.abs);
+  const absStr = absVal >= 1000
+    ? absVal.toLocaleString("ko-KR", { maximumFractionDigits: 2 })
+    : absVal.toFixed(2);
   const pctStr = Number.isFinite(delta.pct) ? ` (${delta.abs >= 0 ? "+" : "−"}${Math.abs(delta.pct).toFixed(2)}%)` : "";
-  return { text: `${sign} ${absStr}${unit && unit !== "원" ? unit : ""}${pctStr}`, dir };
+  const showUnit = unit && unit !== "원" && unit !== "$";
+  return { text: `${sign} ${absStr}${showUnit ? unit : ""}${pctStr}`, dir };
 }
 
 function regionBadge(region) {
   if (region === "KR") return `<span class="badge kr">KR</span>`;
   if (region === "US") return `<span class="badge us">US</span>`;
+  if (region === "CMD") return `<span class="badge cmd">금속</span>`;
+  if (region === "CRY") return `<span class="badge cry">CRYPTO</span>`;
   return `<span class="badge fx">FX</span>`;
 }
 
@@ -74,11 +82,13 @@ export function renderHtml(snapshot) {
   const ratesIds = ["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"];
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
+  const assetIds = ["gold", "silver", "copper", "btc"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
   const ratesHtml = ratesIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const inflHtml = inflationIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const laborHtml = laborIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
+  const assetHtml = assetIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
 
   return `<!doctype html>
 <html lang="ko">
@@ -99,6 +109,8 @@ export function renderHtml(snapshot) {
     --kr: #3b82f6;
     --us: #f59e0b;
     --fx: #a78bfa;
+    --cmd: #eab308;
+    --cry: #f97316;
     --border: #232a44;
   }
   html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
@@ -129,6 +141,8 @@ export function renderHtml(snapshot) {
   .badge.kr { background: rgba(59,130,246,0.15); color: var(--kr); }
   .badge.us { background: rgba(245,158,11,0.15); color: var(--us); }
   .badge.fx { background: rgba(167,139,250,0.15); color: var(--fx); }
+  .badge.cmd { background: rgba(234,179,8,0.15); color: var(--cmd); }
+  .badge.cry { background: rgba(249,115,22,0.15); color: var(--cry); }
   .value { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .card.hero .value { font-size: 30px; }
   .delta { font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
@@ -167,8 +181,11 @@ export function renderHtml(snapshot) {
   <h2>고용</h2>
   <div class="grid">${laborHtml}</div>
 
+  <h2>원자재 & 가상자산</h2>
+  <div class="grid four">${assetHtml}</div>
+
   <footer>
-    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance</div>
+    <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko</div>
     <div>본 페이지는 정보 제공 목적이며, 투자 권유나 자문이 아닙니다. 데이터는 출처에서 지연되어 제공될 수 있습니다.</div>
   </footer>
 </div>

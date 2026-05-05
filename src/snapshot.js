@@ -1,6 +1,7 @@
 import { fetchFred, fetchFredYoY } from "./sources/fred.js";
 import { fetchEcos, fetchEcosYoY } from "./sources/ecos.js";
 import { fetchYahooQuote } from "./sources/yahoo.js";
+import { fetchCoinGeckoPrice } from "./sources/coingecko.js";
 
 function deltaPair(latest, prev) {
   if (!Number.isFinite(latest) || !Number.isFinite(prev)) return null;
@@ -74,6 +75,26 @@ async function buildUsdKrw(env) {
   return { id: "usd_krw", region: "FX", label: "USD/KRW", unit: "원", value: latest, prev, delta: deltaPair(latest, prev), date };
 }
 
+async function buildGold() {
+  const q = await fetchYahooQuote("GC=F");
+  return { id: "gold", region: "CMD", label: "금 (Gold, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+}
+
+async function buildSilver() {
+  const q = await fetchYahooQuote("SI=F");
+  return { id: "silver", region: "CMD", label: "은 (Silver, $/oz)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+}
+
+async function buildCopper() {
+  const q = await fetchYahooQuote("HG=F");
+  return { id: "copper", region: "CMD", label: "동 (Copper, $/lb)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+}
+
+async function buildBitcoin() {
+  const q = await fetchCoinGeckoPrice("bitcoin");
+  return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+}
+
 function buildSpread(usFedRow, krBaseRow) {
   if (!usFedRow || !krBaseRow || usFedRow.error || krBaseRow.error) {
     throw new Error("spread depends on US Fed and KR base — one missing");
@@ -106,6 +127,10 @@ const BUILDERS = [
   { id: "kospi", fn: buildKospi },
   { id: "sp500", fn: buildSp500 },
   { id: "usd_krw", fn: buildUsdKrw },
+  { id: "gold", fn: buildGold },
+  { id: "silver", fn: buildSilver },
+  { id: "copper", fn: buildCopper },
+  { id: "btc", fn: buildBitcoin },
 ];
 
 export async function buildSnapshot(env) {
@@ -127,6 +152,7 @@ export async function buildSnapshot(env) {
     "usd_krw", "us_kr_spread", "kospi", "sp500",
     "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
+    "gold", "silver", "copper", "btc",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });
   return { generatedAt: new Date().toISOString(), items };

@@ -97,6 +97,7 @@ export function renderHtml(snapshot) {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="theme-color" content="#0b1020" />
 <title>KR vs US 거시 대시보드</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   :root {

@@ -23,6 +23,16 @@ export default {
       return new Response("ok", { headers: { "content-type": "text/plain; charset=utf-8" } });
     }
 
+    if (url.pathname === "/favicon.ico" || url.pathname === "/favicon.svg") {
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><text y="52" font-size="56">🌏</text></svg>`;
+      return new Response(svg, {
+        headers: {
+          "content-type": "image/svg+xml; charset=utf-8",
+          "cache-control": "public, max-age=86400, immutable",
+        },
+      });
+    }
+
     if (url.pathname === "/api/snapshot") {
       try {
         const force = url.searchParams.get("fresh") === "1";

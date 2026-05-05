@@ -91,8 +91,13 @@ async function buildCopper() {
 }
 
 async function buildBitcoin() {
-  const q = await fetchCoinGeckoPrice("bitcoin");
-  return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  try {
+    const q = await fetchYahooQuote("BTC-USD");
+    return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  } catch (e) {
+    const q = await fetchCoinGeckoPrice("bitcoin");
+    return { id: "btc", region: "CRY", label: "비트코인 (BTC/USD)", unit: "$", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  }
 }
 
 function buildSpread(usFedRow, krBaseRow) {

@@ -15,8 +15,8 @@ const IMPACT_NOTES = [
     note: "🔴 매우 큼 — 달러·미 국채·증시 변동성 폭 확대 (NFP day)" },
   { re: /\b(CPI|Core CPI|PCE|Core PCE|Inflation Rate)\b/i,
     note: "🔴 매우 큼 — 인플레 경로가 Fed 정책 결정에 직접 반영" },
-  { re: /(한국은행|기준금리|BOK Rate|Bank of Korea Rate)/i,
-    note: "🔴 매우 큼 — 원화·국내 금리·코스피 즉각 반응" },
+  { re: /(한국 기준금리|기준금리 결정|금융통화위원회|금통위|BOK (Rate )?Decision|Bank of Korea (Interest )?Rate)/i,
+    note: "🔴 매우 큼 — 한국 기준금리 결정, 원화·국내 금리·코스피 즉각 반응" },
   { re: /\b(GDP|Gross Domestic Product)\b/i,
     note: "🔴 매우 큼 — 거시 성장 핵심, 환율·증시 추세 결정" },
   { re: /\b(PPI|Producer Price)\b/i,
@@ -43,6 +43,16 @@ const IMPACT_NOTES = [
     note: "🟠 큼 — 한은 정책 방향성 + 코스피 영향" },
   { re: /(한국 GDP|Korea GDP|South Korea GDP)/i,
     note: "🔴 매우 큼 — 코스피·원화 핵심 거시 지표" },
+  { re: /(외환보유액|FX Reserves|Foreign Reserves)/i,
+    note: "🟡 중간 — 원화 안정성·외환 정책 신호" },
+  { re: /(통화·?유동성|통화금융|Money Supply|M2)/i,
+    note: "🟡 중간 — 시중 유동성·물가 압력 가늠" },
+  { re: /(수출입 잠정|수출 잠정|관세청|Trade Balance.*Korea|Korea Trade)/i,
+    note: "🟠 큼 — 반도체·자동차·조선주 주가 직접 반응" },
+  { re: /(외국인 채권|외국인 주식|Foreign Holdings)/i,
+    note: "🟡 중간 — 외국인 자금 흐름·원화 영향" },
+  { re: /(금융통화위원회|금통위|MPC|BOK Monetary Policy)/i,
+    note: "🔴 매우 큼 — 한국 기준금리 결정, 원화·증시·채권 즉각 반응" },
 ];
 
 function getMarketImpact(event) {
@@ -54,11 +64,34 @@ function getMarketImpact(event) {
   return "🔵 참고";
 }
 
-// KRW가 Forex Factory에 등록 안 되는 경우가 많아, 매주 작성 보강용 정적 발표.
-// 갱신은 매주 월요일 (개발자가 수동). 빈 배열이면 자동 생략.
+// KRW가 Forex Factory에 거의 등록 안 되어 매주 수동 보강.
+// 갱신 주기: 매주 월요일 — 한국은행/통계청/관세청/금감원 일정 기반.
+// 갱신 시: CALENDAR_KEY 버전 bump (index.js) 또는 ?fresh=1 호출.
 const KR_STATIC_THIS_WEEK = [
-  // 예: { title: "한국 4월 수출 잠정치", date: "2026-05-09T00:00:00+09:00",
-  //       impact: "High", forecast: "", previous: "" }
+  // 5/4 (월) 11:00 — 한국은행 외환보유액 (월초 정기)
+  { title: "한국 4월 외환보유액 (한국은행)",
+    date: "2026-05-04T11:00:00+09:00", impact: "Medium",
+    forecast: "", previous: "$415.5B" },
+
+  // 5/7 (목) 09:00 — 한국은행 외환시장 동향
+  { title: "한국 4월 외환시장 동향 (한국은행)",
+    date: "2026-05-07T09:00:00+09:00", impact: "Medium",
+    forecast: "", previous: "" },
+
+  // 5/8 (금) 12:00 — 한국은행 통화·유동성 동향 (M1·M2)
+  { title: "한국 4월 통화·유동성 동향 (한국은행, M2)",
+    date: "2026-05-08T12:00:00+09:00", impact: "Medium",
+    forecast: "", previous: "" },
+
+  // 5/8 (금) 12:00 — 금감원 외국인 채권 투자
+  { title: "한국 4월 외국인 채권 보유 동향 (금감원)",
+    date: "2026-05-08T12:00:00+09:00", impact: "Medium",
+    forecast: "", previous: "" },
+
+  // 5/11 (월) 09:00 — 관세청 5월 1~10일 수출입 잠정 (다음 주 시작이지만 thisweek 끝에 포함)
+  { title: "한국 5월 1-10일 수출입 잠정치 (관세청)",
+    date: "2026-05-11T09:30:00+09:00", impact: "High",
+    forecast: "", previous: "" },
 ];
 
 async function fetchEvents() {
@@ -84,19 +117,25 @@ async function fetchEvents() {
 }
 
 export async function buildCalendar() {
+  let fetched = [];
+  let fetchError = null;
   try {
-    const fetched = await fetchEvents();
-    const krStatic = KR_STATIC_THIS_WEEK.map((e) => ({
-      country: "KRW",
-      forecast: "", previous: "", actual: "",
-      ...e,
-    }));
-    const all = [...fetched, ...krStatic].map((e) => ({
-      ...e,
-      marketImpact: getMarketImpact(e),
-    }));
-    return { generatedAt: new Date().toISOString(), events: all };
+    fetched = await fetchEvents();
   } catch (err) {
-    return { generatedAt: new Date().toISOString(), error: err.message, events: [] };
+    fetchError = err.message;
   }
+  const krStatic = KR_STATIC_THIS_WEEK.map((e) => ({
+    country: "KRW",
+    forecast: "", previous: "", actual: "",
+    ...e,
+  }));
+  const all = [...fetched, ...krStatic].map((e) => ({
+    ...e,
+    marketImpact: getMarketImpact(e),
+  }));
+  return {
+    generatedAt: new Date().toISOString(),
+    events: all,
+    ...(fetchError ? { fetchError } : {}),
+  };
 }

@@ -150,6 +150,8 @@ function card(item, hero = false) {
 const ALWAYS_REASON_IDS = new Set([
   "gold", "silver", "copper", "btc",
   "kospi", "kosdaq", "sp500", "nasdaq",
+  "kr_cpi_yoy", "us_cpi_yoy",
+  "kr_unemp", "us_unemp",
 ]);
 
 function reasonBlock(item) {
@@ -750,8 +752,8 @@ export function renderHtml(snapshot, news) {
     var slots = Array.prototype.slice.call(document.querySelectorAll(".reason-slot[data-reason-for]"));
     if (!slots.length) return;
     var ids = slots.map(function (s) { return s.dataset.reasonFor; }).filter(Boolean);
-    // dedupe + cap to 14 (server also caps)
-    ids = Array.from(new Set(ids)).slice(0, 14);
+    // dedupe + cap to 16 (server also caps)
+    ids = Array.from(new Set(ids)).slice(0, 16);
     if (!ids.length) return;
     fetch("/api/reasons?ids=" + encodeURIComponent(ids.join(",")))
       .then(function (r) { return r.json(); })

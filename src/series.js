@@ -27,6 +27,16 @@ export const SERIES_REGISTRY = {
   silver:       { source: "yahoo", symbol: "SI=F" },
   copper:       { source: "yahoo", symbol: "HG=F" },
   btc:          { source: "yahoo", symbol: "BTC-USD" },
+  samsung:      { source: "yahoo", symbol: "005930.KS" },
+  sk_hynix:     { source: "yahoo", symbol: "000660.KS" },
+  naver:        { source: "yahoo", symbol: "035420.KS" },
+  kakao:        { source: "yahoo", symbol: "035720.KS" },
+  lg_energy:    { source: "yahoo", symbol: "373220.KS" },
+  tencent:      { source: "yahoo", symbol: "0700.HK" },
+  alibaba:      { source: "yahoo", symbol: "BABA" },
+  baidu:        { source: "yahoo", symbol: "9888.HK" },
+  xiaomi:       { source: "yahoo", symbol: "1810.HK" },
+  byd:          { source: "yahoo", symbol: "1211.HK" },
 };
 
 function computeYoy(ascSeries) {

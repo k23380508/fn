@@ -14,6 +14,7 @@ function fmtValue(v, unit) {
     : v.toFixed(2);
   if (unit === "원") return `${s} ${unit}`;
   if (unit === "$") return `$${s}`;
+  if (unit === "HK$") return `HK$${s}`;
   if (unit) return `${s}${unit}`;
   return s;
 }
@@ -34,6 +35,8 @@ function fmtDelta(delta, unit) {
 function regionBadge(region) {
   if (region === "KR") return `<span class="badge kr">KR</span>`;
   if (region === "US") return `<span class="badge us">US</span>`;
+  if (region === "KR_TECH") return `<span class="badge kr-tech">K-TECH</span>`;
+  if (region === "CN") return `<span class="badge cn">CN</span>`;
   if (region === "CMD") return `<span class="badge cmd">금속</span>`;
   if (region === "CRY") return `<span class="badge cry">CRYPTO</span>`;
   return `<span class="badge fx">FX</span>`;
@@ -44,6 +47,8 @@ const CHARTABLE_IDS = new Set([
   "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
   "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
   "gold", "silver", "copper", "btc",
+  "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
+  "tencent", "alibaba", "baidu", "xiaomi", "byd",
 ]);
 
 const ALERT_PCT = 3;
@@ -165,6 +170,8 @@ export function renderHtml(snapshot, news) {
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
   const assetIds = ["gold", "silver", "copper", "btc"];
+  const krTechIds = ["samsung", "sk_hynix", "naver", "kakao", "lg_energy"];
+  const cnTechIds = ["tencent", "alibaba", "baidu", "xiaomi", "byd"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
   const equityHtml = equityIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
@@ -172,6 +179,8 @@ export function renderHtml(snapshot, news) {
   const inflHtml = inflationIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const laborHtml = laborIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const assetHtml = assetIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
+  const krTechHtml = krTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
+  const cnTechHtml = cnTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
 
   return `<!doctype html>
 <html lang="ko">
@@ -227,6 +236,8 @@ export function renderHtml(snapshot, news) {
   .badge.fx { background: rgba(167,139,250,0.15); color: var(--fx); }
   .badge.cmd { background: rgba(234,179,8,0.15); color: var(--cmd); }
   .badge.cry { background: rgba(249,115,22,0.15); color: var(--cry); }
+  .badge.kr-tech { background: rgba(59,130,246,0.18); color: var(--kr); }
+  .badge.cn { background: rgba(239,68,68,0.18); color: var(--down); }
   .value { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .card.hero .value { font-size: 30px; }
   .delta { font-size: 13px; margin-top: 4px; font-variant-numeric: tabular-nums; }
@@ -289,7 +300,9 @@ export function renderHtml(snapshot, news) {
   .ko-badge { display: inline-block; font-size: 9px; font-weight: 700; color: var(--kr); background: rgba(59,130,246,0.15); padding: 1px 5px; border-radius: 4px; margin-right: 6px; vertical-align: middle; letter-spacing: 0.04em; }
   @media (min-width: 768px) {
     .news-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .news-grid.news-grid-2 { grid-template-columns: repeat(2, 1fr); }
   }
+  .h2-hint { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
   @media (min-width: 640px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }
@@ -325,6 +338,18 @@ export function renderHtml(snapshot, news) {
 
   <h2>원자재 & 가상자산</h2>
   <div class="grid four">${assetHtml}</div>
+
+  <h2>한국 빅테크 (K-Tech)</h2>
+  <div class="grid five">${krTechHtml}</div>
+
+  <h2>중국 빅테크 (China Tech)</h2>
+  <div class="grid five">${cnTechHtml}</div>
+
+  <h2>빅테크 핵심 뉴스 <span class="h2-hint">(주가 영향 키워드 필터)</span></h2>
+  <div class="news-grid news-grid-2">
+    ${newsSection("한국 빅테크 뉴스", "🇰🇷", news?.kr_tech)}
+    ${newsSection("중국 빅테크 뉴스", "🇨🇳", news?.cn_tech)}
+  </div>
 
   <h2>핫 뉴스</h2>
   <div class="news-grid">

@@ -151,6 +151,26 @@ async function buildBitcoin() {
   }
 }
 
+const BIGTECH = [
+  { id: "samsung",   region: "KR_TECH", symbol: "005930.KS", label: "삼성전자",            unit: "원" },
+  { id: "sk_hynix",  region: "KR_TECH", symbol: "000660.KS", label: "SK하이닉스",          unit: "원" },
+  { id: "naver",     region: "KR_TECH", symbol: "035420.KS", label: "네이버",              unit: "원" },
+  { id: "kakao",     region: "KR_TECH", symbol: "035720.KS", label: "카카오",              unit: "원" },
+  { id: "lg_energy", region: "KR_TECH", symbol: "373220.KS", label: "LG에너지솔루션",      unit: "원" },
+  { id: "tencent",   region: "CN",      symbol: "0700.HK",   label: "텐센트 (Tencent)",    unit: "HK$" },
+  { id: "alibaba",   region: "CN",      symbol: "BABA",      label: "알리바바 (Alibaba)",  unit: "$" },
+  { id: "baidu",     region: "CN",      symbol: "9888.HK",   label: "바이두 (Baidu)",      unit: "HK$" },
+  { id: "xiaomi",    region: "CN",      symbol: "1810.HK",   label: "샤오미 (Xiaomi)",     unit: "HK$" },
+  { id: "byd",       region: "CN",      symbol: "1211.HK",   label: "BYD",                unit: "HK$" },
+];
+
+function makeBigtechBuilder(t) {
+  return async () => {
+    const q = await fetchYahooQuote(t.symbol);
+    return { id: t.id, region: t.region, label: t.label, unit: t.unit, value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+  };
+}
+
 function buildSpread(usFedRow, krBaseRow) {
   if (!usFedRow || !krBaseRow || usFedRow.error || krBaseRow.error) {
     throw new Error("spread depends on US Fed and KR base — one missing");
@@ -190,6 +210,7 @@ const BUILDERS = [
   { id: "silver", fn: buildSilver },
   { id: "copper", fn: buildCopper },
   { id: "btc", fn: buildBitcoin },
+  ...BIGTECH.map((t) => ({ id: t.id, fn: makeBigtechBuilder(t) })),
 ];
 
 export async function buildSnapshot(env) {
@@ -213,6 +234,8 @@ export async function buildSnapshot(env) {
     "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
     "gold", "silver", "copper", "btc",
+    "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
+    "tencent", "alibaba", "baidu", "xiaomi", "byd",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });
   await enrichWithStats(items, env);

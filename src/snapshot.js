@@ -157,6 +157,11 @@ const BIGTECH = [
   { id: "naver",     region: "KR_TECH", symbol: "035420.KS", label: "네이버",              unit: "원" },
   { id: "kakao",     region: "KR_TECH", symbol: "035720.KS", label: "카카오",              unit: "원" },
   { id: "lg_energy", region: "KR_TECH", symbol: "373220.KS", label: "LG에너지솔루션",      unit: "원" },
+  { id: "apple",     region: "US_TECH", symbol: "AAPL",      label: "Apple",              unit: "$" },
+  { id: "microsoft", region: "US_TECH", symbol: "MSFT",      label: "Microsoft",          unit: "$" },
+  { id: "nvidia",    region: "US_TECH", symbol: "NVDA",      label: "NVIDIA",             unit: "$" },
+  { id: "google",    region: "US_TECH", symbol: "GOOGL",     label: "Alphabet (Google)",  unit: "$" },
+  { id: "amazon",    region: "US_TECH", symbol: "AMZN",      label: "Amazon",             unit: "$" },
   { id: "tencent",   region: "CN",      symbol: "0700.HK",   label: "텐센트 (Tencent)",    unit: "HK$" },
   { id: "alibaba",   region: "CN",      symbol: "BABA",      label: "알리바바 (Alibaba)",  unit: "$" },
   { id: "baidu",     region: "CN",      symbol: "9888.HK",   label: "바이두 (Baidu)",      unit: "HK$" },
@@ -235,6 +240,7 @@ export async function buildSnapshot(env) {
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
     "gold", "silver", "copper", "btc",
     "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
+    "apple", "microsoft", "nvidia", "google", "amazon",
     "tencent", "alibaba", "baidu", "xiaomi", "byd",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });

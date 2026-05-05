@@ -7,7 +7,7 @@ import { buildNews } from "./sources/news.js";
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
-const NEWS_KEY = "news:v3:latest";
+const NEWS_KEY = "news:v4:latest";
 const NEWS_TTL = 900;      // 15 minutes
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {

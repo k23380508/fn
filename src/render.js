@@ -36,6 +36,7 @@ function regionBadge(region) {
   if (region === "KR") return `<span class="badge kr">KR</span>`;
   if (region === "US") return `<span class="badge us">US</span>`;
   if (region === "KR_TECH") return `<span class="badge kr-tech">K-TECH</span>`;
+  if (region === "US_TECH") return `<span class="badge us-tech">US-TECH</span>`;
   if (region === "CN") return `<span class="badge cn">CN</span>`;
   if (region === "CMD") return `<span class="badge cmd">금속</span>`;
   if (region === "CRY") return `<span class="badge cry">CRYPTO</span>`;
@@ -48,6 +49,7 @@ const CHARTABLE_IDS = new Set([
   "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
   "gold", "silver", "copper", "btc",
   "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
+  "apple", "microsoft", "nvidia", "google", "amazon",
   "tencent", "alibaba", "baidu", "xiaomi", "byd",
 ]);
 
@@ -171,6 +173,7 @@ export function renderHtml(snapshot, news) {
   const laborIds = ["kr_unemp", "us_unemp"];
   const assetIds = ["gold", "silver", "copper", "btc"];
   const krTechIds = ["samsung", "sk_hynix", "naver", "kakao", "lg_energy"];
+  const usTechIds = ["apple", "microsoft", "nvidia", "google", "amazon"];
   const cnTechIds = ["tencent", "alibaba", "baidu", "xiaomi", "byd"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
@@ -180,6 +183,7 @@ export function renderHtml(snapshot, news) {
   const laborHtml = laborIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const assetHtml = assetIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const krTechHtml = krTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
+  const usTechHtml = usTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const cnTechHtml = cnTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
 
   return `<!doctype html>
@@ -237,6 +241,7 @@ export function renderHtml(snapshot, news) {
   .badge.cmd { background: rgba(234,179,8,0.15); color: var(--cmd); }
   .badge.cry { background: rgba(249,115,22,0.15); color: var(--cry); }
   .badge.kr-tech { background: rgba(59,130,246,0.18); color: var(--kr); }
+  .badge.us-tech { background: rgba(245,158,11,0.18); color: var(--us); }
   .badge.cn { background: rgba(239,68,68,0.18); color: var(--down); }
   .value { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .card.hero .value { font-size: 30px; }
@@ -342,12 +347,16 @@ export function renderHtml(snapshot, news) {
   <h2>한국 빅테크 (K-Tech)</h2>
   <div class="grid five">${krTechHtml}</div>
 
+  <h2>미국 빅테크 (US Big Tech)</h2>
+  <div class="grid five">${usTechHtml}</div>
+
   <h2>중국 빅테크 (China Tech)</h2>
   <div class="grid five">${cnTechHtml}</div>
 
   <h2>빅테크 핵심 뉴스 <span class="h2-hint">(주가 영향 키워드 필터)</span></h2>
-  <div class="news-grid news-grid-2">
+  <div class="news-grid">
     ${newsSection("한국 빅테크 뉴스", "🇰🇷", news?.kr_tech)}
+    ${newsSection("미국 빅테크 뉴스", "🇺🇸", news?.us_tech)}
     ${newsSection("중국 빅테크 뉴스", "🇨🇳", news?.cn_tech)}
   </div>
 

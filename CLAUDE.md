@@ -16,7 +16,7 @@ Repo: https://github.com/k23380508/mp1
 | Alert 임계값 변경 (render.js `ALERT_PCT`) | 동시에 모든 카드 색상/pulse 영향, 사용자 인지 균형 (너무 낮으면 노이즈, 너무 높으면 무의미). 카드별 차등 필요시 alertClass()를 region/id 기반으로 분기 |
 | stats schema 변경 (snapshot.js `STATS_WINDOWS`/`computeStats`) | render.js statsBlock/rangeBar 표시, KV 캐시 무효화 또는 key bump 필요, /api/snapshot consumers, 카드 높이 변동 (그리드 레이아웃 영향) |
 | 새 region/카테고리 추가 (예: KR_TECH, CN, EU 등) | render.js regionBadge() switch + .badge.<class> CSS, snapshot.js BUILDERS+order, series.js SERIES_REGISTRY, render.js CHARTABLE_IDS, render.js 새 섹션 HTML+heroIds/equityIds/...Ids 변수, **새 통화면 fmtValue() 분기** (예: HK$, ¥, €), CLAUDE.md 카드 표 |
-| 빅테크 종목 추가/제거 (snapshot.js `BIGTECH` 배열) | series.js SERIES_REGISTRY 동기화, render.js krTechIds/cnTechIds 배열, news.js 검색 query에 종목명 추가, KV cache key bump (snapshot/news 모두) |
+| 빅테크 종목 추가/제거 (snapshot.js `BIGTECH` 배열) | series.js SERIES_REGISTRY 동기화, render.js {kr,us,cn}TechIds 배열, news.js 검색 query 동기화, render.js 빅테크 뉴스 newsSection 호출 동기화, KV cache key bump (snapshot/news 모두) |
 | 뉴스 source 변경 (news.js URL/parse) | KV 캐시 (news:v2:latest, TTL 15분), render.js newsSection HTML/CSS, /api/news consumers, CLAUDE.md 출처 표 |
 | 뉴스 schema 변경 (kr/us/ai 추가/제거, 번역 토글) | render.js newsSection 호출 + grid columns(.news-grid 768+), KV cache key 버전 bump (news:v3:...) — 옛 cache 자동 무효화, /api/news consumers, CLAUDE.md |
 | Workers AI 번역 모델 변경 | wrangler.jsonc ai binding (변경 금지), news.js translateToKo() 모델명·prompt schema, 번역 실패 fallback 동작 (원문 표시) |

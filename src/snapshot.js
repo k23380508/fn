@@ -63,6 +63,11 @@ async function buildKospi() {
   return { id: "kospi", region: "KR", label: "KOSPI", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
 }
 
+async function buildKosdaq() {
+  const q = await fetchYahooQuote("^KQ11");
+  return { id: "kosdaq", region: "KR", label: "KOSDAQ", unit: "", value: q.value, prev: q.prev, delta: deltaPair(q.value, q.prev), date: q.date };
+}
+
 async function buildSp500(env) {
   const obs = await fetchFred("SP500", env, { limit: 5 });
   const { latest, prev, date } = pickLatestPrev(obs);
@@ -130,6 +135,7 @@ const BUILDERS = [
   { id: "kr_unemp", fn: buildKrUnemp },
   { id: "us_unemp", fn: buildUsUnemp },
   { id: "kospi", fn: buildKospi },
+  { id: "kosdaq", fn: buildKosdaq },
   { id: "sp500", fn: buildSp500 },
   { id: "usd_krw", fn: buildUsdKrw },
   { id: "gold", fn: buildGold },
@@ -154,7 +160,7 @@ export async function buildSnapshot(env) {
   }
 
   const order = [
-    "usd_krw", "us_kr_spread", "kospi", "sp500",
+    "usd_krw", "us_kr_spread", "kospi", "kosdaq", "sp500",
     "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
     "gold", "silver", "copper", "btc",

@@ -78,7 +78,7 @@ function fmtKst(iso) {
 
 export function renderHtml(snapshot) {
   const byId = Object.fromEntries(snapshot.items.map((i) => [i.id, i]));
-  const heroIds = ["usd_krw", "us_kr_spread", "kospi", "sp500"];
+  const heroIds = ["usd_krw", "us_kr_spread", "kospi", "kosdaq", "sp500"];
   const ratesIds = ["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"];
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
@@ -158,7 +158,7 @@ export function renderHtml(snapshot) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }
   @media (min-width: 1024px) {
-    .grid.hero { grid-template-columns: repeat(4, 1fr); }
+    .grid.hero { grid-template-columns: repeat(5, 1fr); }
     .grid.four { grid-template-columns: repeat(4, 1fr); }
     .grid:not(.hero):not(.four) { grid-template-columns: repeat(2, 1fr); }
   }

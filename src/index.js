@@ -1,9 +1,11 @@
 import { buildSnapshot } from "./snapshot.js";
 import { renderHtml } from "./render.js";
 import { getCached, putCached } from "./kv.js";
+import { fetchSeries, RANGES, SERIES_REGISTRY } from "./series.js";
 
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
+const SERIES_TTL = 3600;   // 1 hour
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {
   if (!force) {
@@ -31,6 +33,44 @@ export default {
           "cache-control": "public, max-age=86400, immutable",
         },
       });
+    }
+
+    if (url.pathname === "/api/series") {
+      try {
+        const id = url.searchParams.get("id");
+        const range = url.searchParams.get("range") || "1M";
+        const force = url.searchParams.get("fresh") === "1";
+        if (!id || !SERIES_REGISTRY[id]) {
+          return new Response(JSON.stringify({ error: `unknown id: ${id}` }), { status: 400, headers: { "content-type": "application/json; charset=utf-8" } });
+        }
+        if (!RANGES.includes(range)) {
+          return new Response(JSON.stringify({ error: `unknown range: ${range}, must be one of ${RANGES.join(",")}` }), { status: 400, headers: { "content-type": "application/json; charset=utf-8" } });
+        }
+        const cacheKey = `series:${id}:${range}`;
+        let payload;
+        let source = "fresh";
+        if (!force) {
+          const cached = await getCached(cacheKey, env);
+          if (cached?.series) { payload = cached; source = "kv"; }
+        }
+        if (!payload) {
+          const series = await fetchSeries(id, range, env);
+          payload = { id, range, series, generatedAt: new Date().toISOString() };
+          await putCached(cacheKey, payload, env, SERIES_TTL);
+        }
+        return new Response(JSON.stringify(payload), {
+          headers: {
+            "content-type": "application/json; charset=utf-8",
+            "cache-control": "public, max-age=300",
+            "x-cache": source,
+          },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { "content-type": "application/json; charset=utf-8" },
+        });
+      }
     }
 
     if (url.pathname === "/api/snapshot") {

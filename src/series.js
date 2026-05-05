@@ -1,0 +1,66 @@
+import { fetchFred } from "./sources/fred.js";
+import { fetchEcos } from "./sources/ecos.js";
+import { fetchYahooQuote } from "./sources/yahoo.js";
+
+const RANGE_DAYS = { "1M": 31, "3M": 92, "6M": 183, "1Y": 366, "5Y": 1830 };
+const RANGE_MONTHS = { "1M": 2, "3M": 4, "6M": 7, "1Y": 13, "5Y": 61 };
+const RANGE_TO_YAHOO = { "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "5Y": "5y" };
+
+export const RANGES = Object.keys(RANGE_DAYS);
+
+export const SERIES_REGISTRY = {
+  usd_krw:      { source: "fred", id: "DEXKOUS", freq: "D" },
+  kospi:        { source: "yahoo", symbol: "^KS11" },
+  kosdaq:       { source: "yahoo", symbol: "^KQ11" },
+  sp500:        { source: "fred", id: "SP500", freq: "D" },
+  nasdaq:       { source: "yahoo", symbol: "^IXIC" },
+  vix:          { source: "yahoo", symbol: "^VIX" },
+  kr_base_rate: { source: "ecos", table: "722Y001", item: "0101000", freq: "M" },
+  us_fed_funds: { source: "fred", id: "DFF", freq: "D" },
+  kr_10y:       { source: "ecos", table: "817Y002", item: "010230000", freq: "D" },
+  us_10y:       { source: "fred", id: "DGS10", freq: "D" },
+  kr_cpi_yoy:   { source: "ecos", table: "901Y009", item: "0", freq: "M", computeYoy: true },
+  us_cpi_yoy:   { source: "fred", id: "CPIAUCSL", freq: "M", computeYoy: true },
+  kr_unemp:     { source: "fred", id: "LRHUTTTTKRM156S", freq: "M" },
+  us_unemp:     { source: "fred", id: "UNRATE", freq: "M" },
+  gold:         { source: "yahoo", symbol: "GC=F" },
+  silver:       { source: "yahoo", symbol: "SI=F" },
+  copper:       { source: "yahoo", symbol: "HG=F" },
+  btc:          { source: "yahoo", symbol: "BTC-USD" },
+};
+
+function computeYoy(ascSeries) {
+  const out = [];
+  for (let i = 12; i < ascSeries.length; i++) {
+    const prev = ascSeries[i - 12].value;
+    if (prev) out.push({ date: ascSeries[i].date, value: ((ascSeries[i].value - prev) / prev) * 100 });
+  }
+  return out;
+}
+
+export async function fetchSeries(id, range, env) {
+  const def = SERIES_REGISTRY[id];
+  if (!def) throw new Error(`unknown series id: ${id}`);
+  if (!RANGE_DAYS[range]) throw new Error(`unknown range: ${range}`);
+
+  if (def.source === "fred") {
+    const baseLimit = def.freq === "D" ? RANGE_DAYS[range] : RANGE_MONTHS[range];
+    const limit = baseLimit + (def.computeYoy ? 12 : 0);
+    const obs = await fetchFred(def.id, env, { limit });
+    const asc = obs.map((o) => ({ date: o.date, value: o.value })).reverse();
+    return def.computeYoy ? computeYoy(asc) : asc;
+  }
+  if (def.source === "ecos") {
+    const baseCount = def.freq === "D" ? RANGE_DAYS[range] : RANGE_MONTHS[range];
+    const count = baseCount + (def.computeYoy ? 12 : 0);
+    const obs = await fetchEcos(def.table, def.item, def.freq, env, { count });
+    const asc = obs.map((o) => ({ date: o.date, value: o.value })).reverse();
+    return def.computeYoy ? computeYoy(asc) : asc;
+  }
+  if (def.source === "yahoo") {
+    const yahooRange = RANGE_TO_YAHOO[range] || "1mo";
+    const q = await fetchYahooQuote(def.symbol, { range: yahooRange });
+    return q.series || [];
+  }
+  throw new Error(`unsupported source: ${def.source}`);
+}

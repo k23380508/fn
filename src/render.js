@@ -39,6 +39,13 @@ function regionBadge(region) {
   return `<span class="badge fx">FX</span>`;
 }
 
+const CHARTABLE_IDS = new Set([
+  "usd_krw", "kospi", "kosdaq", "sp500", "nasdaq", "vix",
+  "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
+  "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
+  "gold", "silver", "copper", "btc",
+]);
+
 function card(item, hero = false) {
   if (item.error) {
     return `
@@ -49,8 +56,10 @@ function card(item, hero = false) {
     </article>`;
   }
   const d = fmtDelta(item.delta, item.unit);
+  const chartable = CHARTABLE_IDS.has(item.id);
+  const dataAttr = chartable ? ` data-series-id="${escape(item.id)}" data-label="${escape(item.label)}" tabindex="0" role="button" aria-label="${escape(item.label)} 차트 열기"` : "";
   return `
-    <article class="card${hero ? " hero" : ""}">
+    <article class="card${hero ? " hero" : ""}${chartable ? " clickable" : ""}"${dataAttr}>
       <div class="card-head">
         ${regionBadge(item.region)}
         <span class="label">${escape(item.label)}</span>
@@ -156,6 +165,22 @@ export function renderHtml(snapshot) {
   .err-msg { color: var(--down); }
   footer { color: var(--muted); font-size: 12px; margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--border); line-height: 1.6; }
   footer a { color: var(--muted); text-decoration: underline; }
+  .card.clickable { cursor: pointer; transition: transform 0.1s ease, border-color 0.1s; }
+  .card.clickable:hover, .card.clickable:focus { transform: translateY(-1px); border-color: var(--kr); outline: none; }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 12px; backdrop-filter: blur(4px); }
+  .modal.hidden { display: none; }
+  .modal-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; max-width: 820px; width: 100%; padding: 18px; max-height: 90vh; overflow: auto; }
+  .modal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .modal-head h3 { margin: 0; font-size: 16px; letter-spacing: -0.01em; }
+  .modal-close { background: transparent; border: none; color: var(--muted); font-size: 26px; cursor: pointer; padding: 0 6px; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .range-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .range-tabs button { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: 500; }
+  .range-tabs button:hover { color: var(--text); }
+  .range-tabs button.active { background: var(--kr); color: white; border-color: var(--kr); }
+  .chart-svg { width: 100%; height: auto; display: block; }
+  .chart-loading { color: var(--muted); padding: 60px 20px; text-align: center; font-size: 13px; }
+  .chart-meta { color: var(--muted); font-size: 12px; margin-top: 10px; }
   @media (min-width: 640px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }
@@ -197,6 +222,121 @@ export function renderHtml(snapshot) {
     <div>본 페이지는 정보 제공 목적이며, 투자 권유나 자문이 아닙니다. 데이터는 출처에서 지연되어 제공될 수 있습니다.</div>
   </footer>
 </div>
+
+<div id="chart-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="chart-title">
+  <div class="modal-card">
+    <header class="modal-head">
+      <h3 id="chart-title"></h3>
+      <button class="modal-close" id="chart-close" aria-label="닫기">×</button>
+    </header>
+    <div class="range-tabs" id="range-tabs">
+      <button data-range="1M" class="active">1M</button>
+      <button data-range="3M">3M</button>
+      <button data-range="6M">6M</button>
+      <button data-range="1Y">1Y</button>
+      <button data-range="5Y">5Y</button>
+    </div>
+    <div id="chart-host"><div class="chart-loading">불러오는 중…</div></div>
+    <div id="chart-meta" class="chart-meta"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var modal = document.getElementById("chart-modal");
+  var titleEl = document.getElementById("chart-title");
+  var hostEl = document.getElementById("chart-host");
+  var metaEl = document.getElementById("chart-meta");
+  var tabs = document.getElementById("range-tabs");
+  var current = { id: null, label: null, range: "1M" };
+
+  function open(id, label) {
+    current.id = id; current.label = label; current.range = "1M";
+    setActiveTab("1M");
+    titleEl.textContent = label;
+    modal.classList.remove("hidden");
+    load();
+  }
+  function close() { modal.classList.add("hidden"); }
+  function setActiveTab(r) {
+    tabs.querySelectorAll("button").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.range === r);
+    });
+  }
+  async function load() {
+    hostEl.innerHTML = '<div class="chart-loading">불러오는 중…</div>';
+    metaEl.textContent = "";
+    try {
+      var res = await fetch("/api/series?id=" + encodeURIComponent(current.id) + "&range=" + current.range);
+      var data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || "HTTP " + res.status);
+      var s = data.series || [];
+      if (!s.length) { hostEl.innerHTML = '<div class="chart-loading">데이터 없음</div>'; return; }
+      hostEl.innerHTML = drawSvg(s);
+      var first = s[0].date, last = s[s.length - 1].date;
+      metaEl.textContent = s.length + " 포인트 · " + first + " ~ " + last;
+    } catch (e) {
+      hostEl.innerHTML = '<div class="chart-loading">오류: ' + (e.message || e) + '</div>';
+    }
+  }
+  function drawSvg(series) {
+    var W = 760, H = 320, P = { top: 14, right: 14, bottom: 30, left: 56 };
+    var ys = series.map(function (p) { return p.value; });
+    var yMin = Math.min.apply(null, ys), yMax = Math.max.apply(null, ys);
+    var pad = (yMax - yMin) * 0.06 || Math.abs(yMax) * 0.02 || 1;
+    var y0 = yMin - pad, y1 = yMax + pad;
+    var n = series.length;
+    var sx = function (i) { return P.left + (n <= 1 ? 0 : (i / (n - 1)) * (W - P.left - P.right)); };
+    var sy = function (v) { return H - P.bottom - ((v - y0) / (y1 - y0 || 1)) * (H - P.top - P.bottom); };
+    var path = "";
+    for (var i = 0; i < n; i++) {
+      path += (i === 0 ? "M" : "L") + sx(i).toFixed(1) + " " + sy(series[i].value).toFixed(1) + " ";
+    }
+    var areaPath = path + "L" + sx(n - 1).toFixed(1) + " " + (H - P.bottom) + " L" + sx(0).toFixed(1) + " " + (H - P.bottom) + " Z";
+    var ticks = 4;
+    var grid = "";
+    for (var t = 0; t <= ticks; t++) {
+      var v = y0 + (t / ticks) * (y1 - y0);
+      var y = sy(v);
+      grid += '<line x1="' + P.left + '" y1="' + y.toFixed(1) + '" x2="' + (W - P.right) + '" y2="' + y.toFixed(1) + '" stroke="#232a44" stroke-width="0.5"/>';
+      grid += '<text x="' + (P.left - 8) + '" y="' + (y + 4).toFixed(1) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + (Math.abs(v) >= 1000 ? v.toFixed(0) : v.toFixed(2)) + '</text>';
+    }
+    var first = series[0].date, last = series[n - 1].date;
+    var firstVal = series[0].value, lastVal = series[n - 1].value;
+    var trendUp = lastVal >= firstVal;
+    var stroke = trendUp ? "#22c55e" : "#ef4444";
+    var fill = trendUp ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)";
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="xMidYMid meet" class="chart-svg">' +
+      grid +
+      '<path d="' + areaPath + '" fill="' + fill + '" stroke="none"/>' +
+      '<path d="' + path + '" fill="none" stroke="' + stroke + '" stroke-width="1.8" stroke-linejoin="round"/>' +
+      '<text x="' + P.left + '" y="' + (H - 10) + '" fill="#8a93a6" font-size="11">' + first + '</text>' +
+      '<text x="' + (W - P.right) + '" y="' + (H - 10) + '" fill="#8a93a6" font-size="11" text-anchor="end">' + last + '</text>' +
+      '</svg>';
+  }
+
+  document.addEventListener("click", function (e) {
+    var card = e.target.closest("[data-series-id]");
+    if (card) { open(card.dataset.seriesId, card.dataset.label); return; }
+    if (e.target === modal) close();
+  });
+  document.getElementById("chart-close").addEventListener("click", close);
+  tabs.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-range]");
+    if (!b) return;
+    setActiveTab(b.dataset.range);
+    current.range = b.dataset.range;
+    load();
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") close();
+    if (e.key === "Enter" || e.key === " ") {
+      var card = document.activeElement && document.activeElement.closest && document.activeElement.closest("[data-series-id]");
+      if (card) { e.preventDefault(); open(card.dataset.seriesId, card.dataset.label); }
+    }
+  });
+})();
+</script>
 </body>
 </html>`;
 }

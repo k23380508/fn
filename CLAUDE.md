@@ -20,6 +20,7 @@ Repo: https://github.com/k23380508/mp1
 | Range bar 레이아웃 변경 (rng-head/rng-body 두 줄 구조) | rangeBar() HTML 구조, .rng/.rng-head/.rng-body CSS, .rng-track 1fr 보장 (라벨/태그 길이 무관 일정 비율 유지) |
 | Reason 추가/변경 (sources/reasons.js QUERIES, /api/reasons) | render.js reasonBlock 임계 (현재 ALERT_PCT 3%) + `ALWAYS_REASON_IDS` 핀 셋(현재 12개: gold/silver/copper/btc + kospi/kosdaq/sp500/nasdaq + kr_cpi_yoy/us_cpi_yoy + kr_unemp/us_unemp), 클라 JS loadReasons cap (현재 16), 서버 /api/reasons cap (현재 16), KV key `reason:v2:<id>` (TTL 30분) — schema 변경 시 v3 bump, .reason-link/.analysis CSS, CLAUDE.md 출처 표 |
 | Reason 분석 LLM 변경 (reasons.js generateAnalysis) | 모델 (현재 `@cf/meta/llama-3.1-8b-instruct`), prompt 구조, max_tokens, temperature, /api/reasons에서 snapshot KV 조회 후 item.label·delta 전달 (item 없으면 fallback to top headline + m2m100 번역), .reason-link.analysis 노란 강조 CSS, AI 뱃지 |
+| 경제지표 캘린더 source 변경 (sources/calendar.js URL/필터) | KV cache key `calendar:v1:thisweek` (TTL 1h), /api/calendar consumers, render.js calendarSection 표시(국가 flag 매핑 CAL_COUNTRY_FLAG, IMPORTANT_COUNTRIES 필터, High/Medium impact만), CLAUDE.md 출처 표 |
 | Yahoo 카드 builder (buildYahooCard 헬퍼) | makeBigtechBuilder + buildKospi/buildKosdaq/buildNasdaq/buildVix/buildGold/buildSilver/buildCopper/buildBitcoin 모두 같은 헬퍼 사용 — 1y range 한 번 fetch로 value+prev+stats(hi/lo/changePct) 통합. 변경 시 prev 계산(series[len-2])·stats 채움 동시에 영향 |
 | stats `changePct` (rangeBar 변화율 chip) | render.js rangeBar 안 chgChip 표시, .rng-chg.up/.down/.flat CSS, computeStats의 startValue/endValue 필드 의존 |
 | stats schema 변경 (snapshot.js `STATS_WINDOWS`/`computeStats`) | render.js statsBlock/rangeBar 표시, KV 캐시 무효화 또는 key bump 필요, /api/snapshot consumers, 카드 높이 변동 (그리드 레이아웃 영향) |
@@ -79,7 +80,7 @@ Repo: https://github.com/k23380508/mp1
 
 ```
 src/
-├── index.js        라우터 (/, /api/snapshot, /api/series, /api/news, /healthz, /favicon.{ico,svg})
+├── index.js        라우터 (/, /api/snapshot, /api/series, /api/news, /api/reasons, /api/calendar, /healthz, /favicon.{ico,svg})
 ├── render.js       HTML 렌더링 + 모달 클라 JS + CHARTABLE_IDS Set
 ├── snapshot.js     19개 KR/US 거시 지표 집계 (BUILDERS + order)
 ├── series.js       SERIES_REGISTRY + fetchSeries(id, range) — 차트 모달용 시계열 (1M/3M/6M/1Y/5Y, YoY 자동 계산)
@@ -89,7 +90,9 @@ src/
     ├── fred.js     FRED (St. Louis Fed)
     ├── yahoo.js    Yahoo Finance v8 chart (single quote + series)
     ├── coingecko.js CoinGecko (BTC fallback)
-    └── news.js     Google News RSS (KR/US 경제 뉴스 5개씩)
+    ├── news.js     Google News RSS (KR/US 경제 뉴스 5개씩)
+    ├── reasons.js  STATIC_ANALYSIS 매핑 (외부 AI 없음, 직접 작성한 한 줄 변동 원인)
+    └── calendar.js Forex Factory 경제지표 일정 JSON (High/Medium impact, USD/EUR/JPY/GBP/CNY/KRW)
 ```
 
 ## 바인딩 / 환경
@@ -111,7 +114,7 @@ npx wrangler tail mp1   # 라이브 로그
 
 ## 데이터 출처 / 정책
 
-- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS)
-- 외부 AI 호출 없음 (reason 분석은 정적 데이터, 영문 뉴스는 원문 그대로)
+- 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS) · Forex Factory thisweek JSON (경제지표 캘린더)
+- 외부 AI 호출 없음 (reason 분석은 정적 데이터, 영문 뉴스는 원문 그대로, 캘린더 이벤트 제목도 원문 영문)
 - 추측 금지 — 출처에서 받은 값만 표시, fallback 없으면 "—"
 - 페이지 하단 출처 표기 유지

@@ -218,7 +218,94 @@ function fmtKst(iso) {
   }
 }
 
-export function renderHtml(snapshot, news) {
+const CAL_COUNTRY_FLAG = {
+  USD: "🇺🇸", EUR: "🇪🇺", JPY: "🇯🇵", GBP: "🇬🇧",
+  CNY: "🇨🇳", KRW: "🇰🇷", AUD: "🇦🇺", CAD: "🇨🇦",
+};
+const CAL_DOW_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
+function kstParts(iso) {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return null;
+    const kst = new Date(d.getTime() + 9 * 3600 * 1000);
+    return {
+      yyyy: kst.getUTCFullYear(),
+      mm: String(kst.getUTCMonth() + 1).padStart(2, "0"),
+      dd: String(kst.getUTCDate()).padStart(2, "0"),
+      hh: String(kst.getUTCHours()).padStart(2, "0"),
+      mi: String(kst.getUTCMinutes()).padStart(2, "0"),
+      dow: CAL_DOW_KO[kst.getUTCDay()],
+      epochDay: Math.floor(kst.getTime() / 86400000),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function calendarEventRow(e) {
+  const k = kstParts(e.date);
+  const flag = CAL_COUNTRY_FLAG[e.country] || "";
+  const time = k ? `${k.hh}:${k.mi}` : "";
+  const impactCls = e.impact === "High" ? "high" : "med";
+  const impactLabel = e.impact === "High" ? "HIGH" : "MED";
+  const fc = e.forecast ? `예상 ${escape(e.forecast)}` : "";
+  const pv = e.previous ? `이전 ${escape(e.previous)}` : "";
+  const ac = e.actual ? `<span class="cal-actual">실제 ${escape(e.actual)}</span>` : "";
+  const meta = [ac, fc, pv].filter(Boolean).join(" · ");
+  return `
+    <li class="cal-row">
+      <span class="cal-time">${escape(time)}</span>
+      <span class="cal-flag">${flag} ${escape(e.country)}</span>
+      <span class="cal-impact ${impactCls}">${impactLabel}</span>
+      <span class="cal-title">${escape(e.title)}</span>
+      ${meta ? `<span class="cal-meta">${meta}</span>` : ""}
+    </li>`;
+}
+
+function calendarSection(calendar) {
+  if (!calendar || calendar.error) {
+    return `<h2>📅 경제지표 발표</h2><div class="meta err-msg">캘린더 로드 실패${calendar?.error ? ": " + escape(calendar.error) : ""}</div>`;
+  }
+  const events = Array.isArray(calendar.events) ? calendar.events : [];
+  if (!events.length) {
+    return `<h2>📅 경제지표 발표</h2><div class="meta">이번 주 발표 일정이 없습니다.</div>`;
+  }
+  // KST 기준 오늘 epochDay
+  const now = new Date(Date.now() + 9 * 3600 * 1000);
+  const todayEpoch = Math.floor(now.getTime() / 86400000);
+  // 정렬
+  const sorted = [...events].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const todayList = sorted.filter((e) => kstParts(e.date)?.epochDay === todayEpoch);
+  // 일별 그룹 (오늘 포함)
+  const byDay = new Map();
+  for (const e of sorted) {
+    const k = kstParts(e.date);
+    if (!k) continue;
+    const key = `${k.yyyy}-${k.mm}-${k.dd}`;
+    if (!byDay.has(key)) byDay.set(key, { dow: k.dow, items: [] });
+    byDay.get(key).items.push(e);
+  }
+  const todayBlock = todayList.length
+    ? `<div class="cal-today"><div class="cal-today-head">📌 오늘 (${escape(`${kstParts(todayList[0].date).mm}/${kstParts(todayList[0].date).dd} ${kstParts(todayList[0].date).dow}`)})</div><ul class="cal-list">${todayList.map(calendarEventRow).join("")}</ul></div>`
+    : `<div class="cal-today"><div class="cal-today-head">📌 오늘 발표 없음</div></div>`;
+  const weekBlock = Array.from(byDay.entries()).map(([key, { dow, items }]) => {
+    const isToday = key === `${String(now.getUTCFullYear())}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+    const md = key.slice(5);
+    return `
+      <div class="cal-day${isToday ? " today" : ""}">
+        <div class="cal-day-head">${escape(md.replace("-", "/"))} <span class="cal-dow">${escape(dow)}</span> <span class="cal-cnt">${items.length}건</span></div>
+        <ul class="cal-list">${items.map(calendarEventRow).join("")}</ul>
+      </div>`;
+  }).join("");
+  return `
+    <h2>📅 경제지표 발표 <span class="h2-hint">(High/Medium impact, KST 표시)</span></h2>
+    ${todayBlock}
+    <div class="cal-week-head">📆 이번 주 일정</div>
+    <div class="cal-week">${weekBlock}</div>`;
+}
+
+export function renderHtml(snapshot, news, calendar) {
   const byId = Object.fromEntries(snapshot.items.map((i) => [i.id, i]));
   const heroIds = ["usd_krw", "vix"];
   const equityIds = ["kospi", "kosdaq", "sp500", "nasdaq"];
@@ -410,6 +497,32 @@ export function renderHtml(snapshot, news) {
     .news-grid.news-grid-2 { grid-template-columns: repeat(2, 1fr); }
   }
   .h2-hint { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
+  .cal-today { background: var(--card); border: 1px solid var(--kr); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; box-shadow: 0 0 0 1px rgba(59,130,246,0.18); }
+  .cal-today-head { font-size: 12px; font-weight: 700; color: var(--kr); margin-bottom: 8px; letter-spacing: 0.04em; }
+  .cal-week-head { font-size: 12px; font-weight: 600; color: var(--muted); margin: 14px 0 8px; letter-spacing: 0.04em; }
+  .cal-week { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 768px) {
+    .cal-week { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  }
+  @media (min-width: 1024px) {
+    .cal-week { grid-template-columns: repeat(3, 1fr); }
+  }
+  .cal-day { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+  .cal-day.today { border-color: var(--kr); box-shadow: inset 0 0 0 1px rgba(59,130,246,0.30); }
+  .cal-day-head { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .cal-dow { color: var(--muted); }
+  .cal-cnt { color: var(--muted); font-weight: 400; margin-left: auto; font-size: 10px; }
+  .cal-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+  .cal-row { display: grid; grid-template-columns: minmax(40px, auto) minmax(40px, auto) minmax(38px, auto) 1fr; align-items: baseline; gap: 6px; padding: 4px 0; border-top: 1px dashed var(--border); font-size: 11px; }
+  .cal-row:first-child { border-top: none; padding-top: 0; }
+  .cal-time { color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 600; }
+  .cal-flag { color: var(--muted); white-space: nowrap; }
+  .cal-impact { font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 3px; letter-spacing: 0.04em; }
+  .cal-impact.high { background: rgba(239,68,68,0.20); color: var(--down); }
+  .cal-impact.med  { background: rgba(245,158,11,0.20); color: var(--us); }
+  .cal-title { color: var(--text); line-height: 1.35; }
+  .cal-meta { grid-column: 4; color: var(--muted); font-size: 10px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .cal-actual { color: var(--up); font-weight: 600; }
   @media (min-width: 640px) {
     .grid { grid-template-columns: repeat(2, 1fr); }
   }
@@ -427,6 +540,8 @@ export function renderHtml(snapshot, news) {
     <h1>🌏 KR vs US 거시 대시보드</h1>
     <div class="updated">마지막 업데이트: ${escape(fmtKst(snapshot.generatedAt))}</div>
   </header>
+
+  ${calendarSection(calendar)}
 
   <h2>핵심 지표</h2>
   <div class="grid hero">${heroHtml}</div>

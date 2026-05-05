@@ -4,6 +4,7 @@ import { getCached, putCached } from "./kv.js";
 import { fetchSeries, RANGES, SERIES_REGISTRY } from "./series.js";
 import { buildNews } from "./sources/news.js";
 import { buildReasonsFor } from "./sources/reasons.js";
+import { buildCalendar } from "./sources/calendar.js";
 
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
@@ -11,6 +12,8 @@ const SERIES_TTL = 3600;   // 1 hour
 const NEWS_KEY = "news:v5:latest";
 const NEWS_TTL = 900;      // 15 minutes
 const REASON_TTL = 86400;  // 24 hours per id (static analysis stable for the day)
+const CALENDAR_KEY = "calendar:v1:thisweek";
+const CALENDAR_TTL = 3600; // 1 hour
 
 async function getOrBuildSnapshot(env, { force = false } = {}) {
   if (!force) {
@@ -29,6 +32,16 @@ async function getOrBuildNews(env, { force = false } = {}) {
   }
   const fresh = await buildNews(env);
   await putCached(NEWS_KEY, fresh, env, NEWS_TTL);
+  return fresh;
+}
+
+async function getOrBuildCalendar(env, { force = false } = {}) {
+  if (!force) {
+    const cached = await getCached(CALENDAR_KEY, env);
+    if (cached?.generatedAt) return cached;
+  }
+  const fresh = await buildCalendar();
+  await putCached(CALENDAR_KEY, fresh, env, CALENDAR_TTL);
   return fresh;
 }
 
@@ -140,6 +153,21 @@ export default {
       }
     }
 
+    if (url.pathname === "/api/calendar") {
+      try {
+        const force = url.searchParams.get("fresh") === "1";
+        const cal = await getOrBuildCalendar(env, { force });
+        return new Response(JSON.stringify(cal), {
+          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=600" },
+        });
+      } catch (e) {
+        return new Response(JSON.stringify({ error: e.message }), {
+          status: 500,
+          headers: { "content-type": "application/json; charset=utf-8" },
+        });
+      }
+    }
+
     if (url.pathname === "/api/news") {
       try {
         const force = url.searchParams.get("fresh") === "1";
@@ -157,11 +185,12 @@ export default {
 
     if (url.pathname === "/" || url.pathname === "") {
       try {
-        const [{ snapshot, source }, news] = await Promise.all([
+        const [{ snapshot, source }, news, calendar] = await Promise.all([
           getOrBuildSnapshot(env),
           getOrBuildNews(env).catch((e) => ({ kr: { error: e.message }, us: { error: e.message } })),
+          getOrBuildCalendar(env).catch((e) => ({ error: e.message, events: [] })),
         ]);
-        const html = renderHtml(snapshot, news);
+        const html = renderHtml(snapshot, news, calendar);
         return new Response(html, {
           headers: {
             "content-type": "text/html; charset=utf-8",

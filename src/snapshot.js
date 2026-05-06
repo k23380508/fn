@@ -34,10 +34,16 @@ function computeStats(series) {
   return Object.keys(out).length ? out : null;
 }
 
+// 무료 plan subrequest 50 한도 보호 — ETF 5개 추가 후 enrich에서 추가 fetch
+// 공간 부족. cpi/unemp stats(range bar)는 trade-off로 비활성. 빌더가 처리하지
+// 않는 다른 카드(향후 추가)는 enrich가 fallback으로 채움.
+const ENRICH_SKIP_IDS = new Set(["kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp"]);
+
 async function enrichWithStats(items, env) {
   const FALLBACK_RANGES = ["1Y", "6M", "3M", "1M"];
   await Promise.all(items.map(async (item) => {
-    if (item.error || item.stats || !SERIES_REGISTRY[item.id]) return; // skip if already populated by builder
+    if (item.error || item.stats || !SERIES_REGISTRY[item.id]) return;
+    if (ENRICH_SKIP_IDS.has(item.id)) return;
     for (const r of FALLBACK_RANGES) {
       try {
         const series = await fetchSeries(item.id, r, env);
@@ -50,7 +56,6 @@ async function enrichWithStats(items, env) {
         // try next range
       }
     }
-    // best-effort; leave stats undefined if all ranges fail
   }));
 }
 
@@ -99,13 +104,30 @@ async function buildUsFedFunds(env) {
   return out;
 }
 
+function computeYoYFromObs(obs) {
+  // obs: desc (최신 first). YoY = (latest - 12개월전) / 12개월전 * 100
+  const latest = obs[0];
+  const yearAgo = obs[12];
+  const prev = obs[1];
+  const yearAgoPrev = obs[13];
+  if (!latest || !yearAgo || !yearAgo.value) return { value: null, prev: null, date: latest?.date };
+  const value = ((latest.value - yearAgo.value) / yearAgo.value) * 100;
+  const prevVal = (prev && yearAgoPrev && yearAgoPrev.value)
+    ? ((prev.value - yearAgoPrev.value) / yearAgoPrev.value) * 100
+    : null;
+  return { value, prev: prevVal, date: latest.date };
+}
+
 async function buildKrCpiYoy(env) {
-  const yoy = await fetchEcosYoY("901Y009", "0", env);
+  // YoY 계산용 16개월치 한 번에 fetch (이전엔 fetchEcosYoY + fetchEcos 2회 호출)
+  const obs = await fetchEcos("901Y009", "0", "M", env, { count: 16 });
+  const yoy = computeYoYFromObs(obs);
   return { id: "kr_cpi_yoy", region: "KR", label: "한국 CPI (전년동월비)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date };
 }
 
 async function buildUsCpiYoy(env) {
-  const yoy = await fetchFredYoY("CPIAUCSL", env);
+  const obs = await fetchFred("CPIAUCSL", env, { limit: 16 });
+  const yoy = computeYoYFromObs(obs);
   return { id: "us_cpi_yoy", region: "US", label: "美 CPI (YoY)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date };
 }
 

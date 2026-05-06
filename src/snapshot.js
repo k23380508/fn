@@ -170,10 +170,10 @@ async function buildBitcoin() {
   }
 }
 
-// 한국 빅테크 풀 (시가총액 상위 10개) — render에서 변동률 |Δ| 큰 top 5만 표시.
+// 한국 빅테크 표시 = (시총 top 10에서 |Δ| 큰 3개) + (변동성 풀 5에서 max gain 1, max loss 1)
 // 매 snapshot 빌드(KV 90분) 시 풀 전체 fetch → render가 동적 선정.
 const BIGTECH = [
-  // KR_TECH 10 (시총 top)
+  // KR_TECH 시총 top 10
   { id: "samsung",     region: "KR_TECH", symbol: "005930.KS", label: "삼성전자",            unit: "원" },
   { id: "sk_hynix",    region: "KR_TECH", symbol: "000660.KS", label: "SK하이닉스",          unit: "원" },
   { id: "lg_energy",   region: "KR_TECH", symbol: "373220.KS", label: "LG에너지솔루션",      unit: "원" },
@@ -184,6 +184,12 @@ const BIGTECH = [
   { id: "celltrion",   region: "KR_TECH", symbol: "068270.KS", label: "셀트리온",            unit: "원" },
   { id: "posco",       region: "KR_TECH", symbol: "005490.KS", label: "POSCO홀딩스",         unit: "원" },
   { id: "kakao",       region: "KR_TECH", symbol: "035720.KS", label: "카카오",              unit: "원" },
+  // KR_MOVERS — 변동성 후보 풀 (시총 무관, 일반적으로 일일 변동 폭이 큰 종목)
+  { id: "hanwha_aero",  region: "KR_TECH", symbol: "012450.KS", label: "한화에어로스페이스",  unit: "원" },
+  { id: "doosan_ener",  region: "KR_TECH", symbol: "034020.KS", label: "두산에너빌리티",      unit: "원" },
+  { id: "krafton",      region: "KR_TECH", symbol: "259960.KS", label: "크래프톤",            unit: "원" },
+  { id: "ecopro_bm",    region: "KR_TECH", symbol: "247540.KQ", label: "에코프로비엠",        unit: "원" },
+  { id: "alteogen",     region: "KR_TECH", symbol: "196170.KQ", label: "알테오젠",            unit: "원" },
   // US_TECH (Magnificent 5)
   { id: "apple",     region: "US_TECH", symbol: "AAPL",      label: "Apple",              unit: "$" },
   { id: "microsoft", region: "US_TECH", symbol: "MSFT",      label: "Microsoft",          unit: "$" },
@@ -235,6 +241,7 @@ export async function buildSnapshot(env) {
     "gold", "silver", "copper", "btc",
     "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
     "kia", "naver", "celltrion", "posco", "kakao",
+    "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
     "apple", "microsoft", "nvidia", "google", "amazon",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });

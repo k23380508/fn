@@ -31,6 +31,11 @@ const QUERIES = {
   celltrion:    { q: "셀트리온 주가", ko: true },
   posco:        { q: "POSCO홀딩스 주가", ko: true },
   kakao:        { q: "카카오 Kakao 주가", ko: true },
+  hanwha_aero:  { q: "한화에어로스페이스 주가", ko: true },
+  doosan_ener:  { q: "두산에너빌리티 주가", ko: true },
+  krafton:      { q: "크래프톤 주가", ko: true },
+  ecopro_bm:    { q: "에코프로비엠 주가", ko: true },
+  alteogen:     { q: "알테오젠 주가", ko: true },
   apple:        { q: "Apple AAPL stock" },
   microsoft:    { q: "Microsoft MSFT stock" },
   nvidia:       { q: "NVIDIA NVDA stock" },
@@ -116,6 +121,11 @@ const STATIC_ANALYSIS = {
   celltrion:    "바이오시밀러 짐펜트라(美 직판) 실적 가속과 신약 파이프라인 진척으로 강세. 환율도 우호.",
   posco:        "철강 업황 바닥 신호와 이차전지 소재(양극재·리튬) 사업 가치 재평가 기대.",
   kakao:        "광고 매출 회복 더디고 AI 차별화 부족으로 약세. 자회사 분리상장 이슈도 부담.",
+  hanwha_aero:  "방산 수출 호조(폴란드·중동 추가)와 우주 사업 모멘텀으로 변동 폭 큼. 지정학 이슈에 즉각 반응.",
+  doosan_ener:  "원전 수주(체코·사우디) 기대와 SMR 모멘텀으로 단기 급등락. 정책 변수에 민감.",
+  krafton:      "배그(PUBG) 글로벌 매출과 신작 파이프라인 따라 변동. 중국·인도 모바일 시장 노출 큼.",
+  ecopro_bm:    "양극재 수요·리튬 가격에 직접 연동되며 변동성 큼. 미국 IRA 보조금·테슬라 발주가 핵심 변수.",
+  alteogen:     "ALT-B4(허셉틴 SC)와 머크 키트루다 SC 라이선스 마일스톤·로열티 가시화로 급등락 반복.",
 
   // 미국 빅테크 (Magnificent 5)
   apple:        "iPhone 신모델 판매 호조와 서비스 부문 마진 확대로 신고가 권역. AI 통합(Apple Intelligence) 모멘텀.",

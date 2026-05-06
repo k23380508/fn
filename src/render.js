@@ -63,13 +63,18 @@ const CHARTABLE_IDS = new Set([
   "gold", "silver", "copper", "btc",
   "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
   "kia", "naver", "celltrion", "posco", "kakao",
+  "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
   "apple", "microsoft", "nvidia", "google", "amazon",
 ]);
 
-// 한국 빅테크 풀 — render 시점에 |Δ| 큰 top 5만 표시
+// 한국 빅테크 시총 top 10 풀 → |Δ| 큰 3개
 const KR_TECH_POOL = [
   "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
   "kia", "naver", "celltrion", "posco", "kakao",
+];
+// 변동성 후보 풀 (시총 무관) → max gain 1 + max loss 1
+const KR_MOVERS_POOL = [
+  "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
 ];
 
 function pickTopMovers(byId, pool, n = 5) {
@@ -79,6 +84,22 @@ function pickTopMovers(byId, pool, n = 5) {
     .sort((a, b) => Math.abs(b.delta.pct) - Math.abs(a.delta.pct))
     .slice(0, n)
     .map((it) => it.id);
+}
+
+function pickMaxGain(byId, pool) {
+  const arr = pool
+    .map((id) => byId[id])
+    .filter((it) => it && !it.error && Number.isFinite(it?.delta?.pct) && it.delta.pct > 0)
+    .sort((a, b) => b.delta.pct - a.delta.pct);
+  return arr[0]?.id;
+}
+
+function pickMaxLoss(byId, pool) {
+  const arr = pool
+    .map((id) => byId[id])
+    .filter((it) => it && !it.error && Number.isFinite(it?.delta?.pct) && it.delta.pct < 0)
+    .sort((a, b) => a.delta.pct - b.delta.pct);
+  return arr[0]?.id;
 }
 
 const ALERT_PCT = 3;
@@ -359,8 +380,11 @@ export function renderHtml(snapshot, news, calendar) {
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
   const assetIds = ["gold", "silver", "copper", "btc"];
-  // 매 snapshot 갱신마다 한국 빅테크 풀(시총 10) 중 |Δ| top 5 동적 선정
-  const krTechIds = pickTopMovers(byId, KR_TECH_POOL, 5);
+  // 한국 빅테크 5개 = 시총 풀 |Δ| top 3 + movers 풀 max+ 1 + max- 1 (dedupe)
+  const krTop3 = pickTopMovers(byId, KR_TECH_POOL, 3);
+  const krGain = pickMaxGain(byId, KR_MOVERS_POOL);
+  const krLoss = pickMaxLoss(byId, KR_MOVERS_POOL);
+  const krTechIds = [...new Set([...krTop3, krGain, krLoss].filter(Boolean))];
   const usTechIds = ["apple", "microsoft", "nvidia", "google", "amazon"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
@@ -607,7 +631,7 @@ export function renderHtml(snapshot, news, calendar) {
   <h2>원자재 & 가상자산</h2>
   <div class="grid four">${assetHtml}</div>
 
-  <h2>한국 빅테크 (K-Tech) <span class="h2-hint">시총 top 10 풀에서 일일 변동률 큰 5개</span></h2>
+  <h2>한국 빅테크 (K-Tech) <span class="h2-hint">시총 top 10 중 변동 큰 3개 + 시장 max상승 1 + max하락 1</span></h2>
   <div class="grid five">${krTechHtml}</div>
 
   <h2>미국 빅테크 (US Big Tech)</h2>

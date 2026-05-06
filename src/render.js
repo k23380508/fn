@@ -64,10 +64,10 @@ const CHARTABLE_IDS = new Set([
   "gold", "silver", "copper", "btc",
   "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
   "kia", "naver", "celltrion", "posco", "kakao",
-  "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
+  "hanwha_aero", "ecopro_bm", "alteogen",
   "apple", "microsoft", "nvidia", "google", "amazon",
   "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
-  "amd", "palantir", "coinbase",
+  "amd", "palantir",
   "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
 ]);
 
@@ -76,18 +76,18 @@ const KR_TECH_POOL = [
   "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
   "kia", "naver", "celltrion", "posco", "kakao",
 ];
-// 한국 변동성 후보 풀 (시총 무관) → max gain 1 + max loss 1
+// 한국 변동성 후보 풀 (시총 무관) → max loss 1
 const KR_MOVERS_POOL = [
-  "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
+  "hanwha_aero", "ecopro_bm", "alteogen",
 ];
 // 미국 빅테크 시총 top 10 풀 → |Δ| 큰 3개
 const US_TECH_POOL = [
   "apple", "microsoft", "nvidia", "google", "amazon",
   "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
 ];
-// 미국 변동성 후보 풀 (시총 무관) → max gain 1 + max loss 1
+// 미국 변동성 후보 풀 (시총 무관) → max loss 1
 const US_MOVERS_POOL = [
-  "amd", "palantir", "coinbase",
+  "amd", "palantir",
 ];
 
 function pickTopMovers(byId, pool, n = 5) {
@@ -222,11 +222,11 @@ const ALWAYS_REASON_IDS = new Set([
   // 한국 빅테크 (시총 풀 + 변동성 풀)
   "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
   "kia", "naver", "celltrion", "posco", "kakao",
-  "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
+  "hanwha_aero", "ecopro_bm", "alteogen",
   // 미국 빅테크 (시총 풀 + 변동성 풀)
   "apple", "microsoft", "nvidia", "google", "amazon",
   "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
-  "amd", "palantir", "coinbase",
+  "amd", "palantir",
   // 미국 ETF
   "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
 ]);

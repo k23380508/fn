@@ -243,10 +243,8 @@ const BIGTECH = [
   { id: "celltrion",   region: "KR_TECH", symbol: "068270.KS", label: "셀트리온",            unit: "원" },
   { id: "posco",       region: "KR_TECH", symbol: "005490.KS", label: "POSCO홀딩스",         unit: "원" },
   { id: "kakao",       region: "KR_TECH", symbol: "035720.KS", label: "카카오",              unit: "원" },
-  // KR_MOVERS — 변동성 후보 풀 (시총 무관, 일반적으로 일일 변동 폭이 큰 종목)
+  // KR_MOVERS — 변동성 후보 풀 (XLU 한도 보호 위해 두산·크래프톤 제거, 3종 유지)
   { id: "hanwha_aero",  region: "KR_TECH", symbol: "012450.KS", label: "한화에어로스페이스",  unit: "원" },
-  { id: "doosan_ener",  region: "KR_TECH", symbol: "034020.KS", label: "두산에너빌리티",      unit: "원" },
-  { id: "krafton",      region: "KR_TECH", symbol: "259960.KS", label: "크래프톤",            unit: "원" },
   { id: "ecopro_bm",    region: "KR_TECH", symbol: "247540.KQ", label: "에코프로비엠",        unit: "원" },
   { id: "alteogen",     region: "KR_TECH", symbol: "196170.KQ", label: "알테오젠",            unit: "원" },
   // US_TECH 시총 top 10
@@ -261,9 +259,9 @@ const BIGTECH = [
   { id: "berkshire", region: "US_TECH", symbol: "BRK-B", label: "Berkshire Hathaway",   unit: "$" },
   { id: "jpmorgan",  region: "US_TECH", symbol: "JPM",   label: "JPMorgan Chase",       unit: "$" },
   // US_MOVERS — 변동성 후보 풀 (시총 무관, 변동성 폭 큰 종목)
+  // US_MOVERS — Coinbase 제거 (XLU 한도 보호, 2종 유지)
   { id: "amd",       region: "US_TECH", symbol: "AMD",   label: "AMD",                  unit: "$" },
   { id: "palantir",  region: "US_TECH", symbol: "PLTR",  label: "Palantir",             unit: "$" },
-  { id: "coinbase",  region: "US_TECH", symbol: "COIN",  label: "Coinbase",             unit: "$" },
   // 미국 ETF (사용자 지정 5종)
   { id: "arq_etf",  region: "US_ETF", symbol: "ARQ",  label: "ARQ",                       unit: "$" },
   { id: "gld_etf",  region: "US_ETF", symbol: "GLD",  label: "GLD (SPDR Gold)",           unit: "$" },
@@ -315,10 +313,10 @@ export async function buildSnapshot(env) {
     "gold", "silver", "copper", "btc",
     "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
     "kia", "naver", "celltrion", "posco", "kakao",
-    "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
+    "hanwha_aero", "ecopro_bm", "alteogen",
     "apple", "microsoft", "nvidia", "google", "amazon",
     "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
-    "amd", "palantir", "coinbase",
+    "amd", "palantir",
     "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });

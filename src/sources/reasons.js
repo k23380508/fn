@@ -156,37 +156,53 @@ async function fetchOne(input, env) {
   const id = typeof input === "string" ? input : input.id;
   const def = QUERIES[id];
   if (!def) return null;
+
+  const analysis = STATIC_ANALYSIS[id] || null;
+  let top = null;
+
+  // Best-effort RSS fetch for link/source — failure does NOT block static analysis.
   try {
     const res = await fetch(reasonUrl(def.q, def.ko), {
       cf: { cacheTtl: 600, cacheEverything: true },
       headers: { "User-Agent": "Mozilla/5.0 (compatible; mp1-worker/1.0)" },
     });
-    if (!res.ok) return null;
-    const xml = await res.text();
-    const heads = [];
-    const itemRe = /<item>([\s\S]*?)<\/item>/g;
-    let m;
-    while ((m = itemRe.exec(xml)) !== null && heads.length < 1) {
-      const block = m[1];
-      heads.push({
-        title: unwrapCdata(extract(block, "title")),
-        link: unwrapCdata(extract(block, "link")),
-        source: unwrapCdata(extract(block, "source")),
-      });
+    if (res.ok) {
+      const xml = await res.text();
+      const m = /<item>([\s\S]*?)<\/item>/.exec(xml);
+      if (m) {
+        const block = m[1];
+        top = {
+          title: unwrapCdata(extract(block, "title")),
+          link: unwrapCdata(extract(block, "link")),
+          source: unwrapCdata(extract(block, "source")),
+        };
+      }
     }
-    if (!heads.length) return null;
-    const top = heads[0];
-    const analysis = STATIC_ANALYSIS[id] || null;
+  } catch {
+    // ignore — static analysis fallback below
+  }
+
+  // Static analysis 있으면 link/source 없어도 항상 반환
+  if (analysis) {
     return {
-      headline: analysis || top.title,
-      link: top.link,
-      source: top.source,
-      analysis: !!analysis,
+      headline: analysis,
+      link: top?.link || "",
+      source: top?.source || "",
+      analysis: true,
       translated: false,
     };
-  } catch {
-    return null;
   }
+  // Static 없으면 RSS top headline fallback
+  if (top?.title) {
+    return {
+      headline: top.title,
+      link: top.link,
+      source: top.source,
+      analysis: false,
+      translated: false,
+    };
+  }
+  return null;
 }
 
 export async function buildReasonsFor(inputs, env, { batch = 5 } = {}) {

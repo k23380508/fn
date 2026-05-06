@@ -146,14 +146,14 @@ async function handleRequest(request, env) {
     if (url.pathname === "/api/reasons") {
       try {
         const idsParam = url.searchParams.get("ids") || "";
-        const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 16);
+        const ids = idsParam.split(",").map((s) => s.trim()).filter(Boolean).slice(0, 30);
         if (!ids.length) return new Response(JSON.stringify({}), { headers: { "content-type": "application/json; charset=utf-8" } });
         const force = url.searchParams.get("fresh") === "1";
         const out = {};
         const missing = [];
         for (const id of ids) {
           if (!force) {
-            const cached = await getCached(`reason:v3:${id}`, env);
+            const cached = await getCached(`reason:v4:${id}`, env);
             if (cached?.headline) { out[id] = cached; continue; }
           }
           missing.push(id);
@@ -164,7 +164,7 @@ async function handleRequest(request, env) {
           for (const id of missing) {
             if (built[id]) {
               out[id] = built[id];
-              await putCached(`reason:v3:${id}`, built[id], env, REASON_TTL);
+              await putCached(`reason:v4:${id}`, built[id], env, REASON_TTL);
             }
           }
         }

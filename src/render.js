@@ -212,6 +212,14 @@ const ALWAYS_REASON_IDS = new Set([
   "kospi", "kosdaq", "sp500", "nasdaq",
   "kr_cpi_yoy", "us_cpi_yoy",
   "kr_unemp", "us_unemp",
+  // 한국 빅테크 (시총 풀 + 변동성 풀)
+  "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
+  "kia", "naver", "celltrion", "posco", "kakao",
+  "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
+  // 미국 빅테크 (시총 풀 + 변동성 풀)
+  "apple", "microsoft", "nvidia", "google", "amazon",
+  "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
+  "amd", "palantir", "coinbase",
 ]);
 
 function reasonBlock(item) {
@@ -955,8 +963,8 @@ export function renderHtml(snapshot, news, calendar) {
     var slots = Array.prototype.slice.call(document.querySelectorAll(".reason-slot[data-reason-for]"));
     if (!slots.length) return;
     var ids = slots.map(function (s) { return s.dataset.reasonFor; }).filter(Boolean);
-    // dedupe + cap to 16 (server also caps)
-    ids = Array.from(new Set(ids)).slice(0, 16);
+    // dedupe + cap to 30 (server also caps) — 표시되는 빅테크 5+5 + ALWAYS 12 + alert 여유
+    ids = Array.from(new Set(ids)).slice(0, 30);
     if (!ids.length) return;
     fetch("/api/reasons?ids=" + encodeURIComponent(ids.join(",")))
       .then(function (r) { return r.json(); })

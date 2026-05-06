@@ -100,6 +100,7 @@ src/
 
 - KV: `MACRO_CACHE` (id `4b024d35834f4d85b912e903fc785e36`) — wrangler.jsonc, 변경 금지
 - AI: 외부 AI 호출 없음. reason 분석은 `src/sources/reasons.js`의 `STATIC_ANALYSIS` 매핑 (개발자가 직접 작성, 갱신 시 KV key v3→v4 bump)
+- 보안 헤더: index.js `SECURITY_HEADERS` 상수가 모든 응답에 적용 (CSP/HSTS/X-Frame/X-Content-Type/Referrer/Permissions). CSP가 `script-src 'self' 'unsafe-inline'`라 외부 script 추가하려면 CSP 완화 필요. 외부 link href는 `safeLink()`/`safeUrl()`로 http(s)만 허용 (XSS 방어).
 - Secrets: ECOS API key, FRED API key (각 source에서 `env.*`로 참조 — `wrangler secret put`로 관리)
 - compatibility_date: 2026-05-02
 

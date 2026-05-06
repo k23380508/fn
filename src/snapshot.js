@@ -63,16 +63,28 @@ function pickLatestPrev(series) {
   return { latest: series[0]?.value, prev: series[1]?.value, date: series[0]?.date };
 }
 
+// 금리 카드용 변경 이력: 최신 + 직전 변경 2회 (DFF는 daily라 같은 값 반복 →
+// 다른 값으로 바뀐 시점만 추출). desc obs (최신 first) 가정.
+function rateHistory(obs, n = 3) {
+  const out = [];
+  for (let i = 0; i < obs.length && out.length < n; i++) {
+    if (out.length === 0 || out[out.length - 1].value !== obs[i].value) {
+      out.push({ date: obs[i].date, value: obs[i].value });
+    }
+  }
+  return out;
+}
+
 async function buildKrBaseRate(env) {
   const obs = await fetchEcos("722Y001", "0101000", "M", env, { count: 24 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_base_rate", region: "KR", label: "한국 기준금리", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "kr_base_rate", region: "KR", label: "한국 기준금리", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
 }
 
 async function buildUsFedFunds(env) {
-  const obs = await fetchFred("DFF", env, { limit: 2 });
+  const obs = await fetchFred("DFF", env, { limit: 200 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_fed_funds", region: "US", label: "美 연준 기준금리 (DFF)", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "us_fed_funds", region: "US", label: "美 연준 기준금리 (DFF)", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
 }
 
 async function buildKrCpiYoy(env) {
@@ -88,13 +100,13 @@ async function buildUsCpiYoy(env) {
 async function buildKr10y(env) {
   const obs = await fetchEcos("817Y002", "010230000", "D", env, { count: 30 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
 }
 
 async function buildUs10y(env) {
-  const obs = await fetchFred("DGS10", env, { limit: 5 });
+  const obs = await fetchFred("DGS10", env, { limit: 30 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_10y", region: "US", label: "美 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
+  return { id: "us_10y", region: "US", label: "美 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
 }
 
 async function buildKrUnemp(env) {

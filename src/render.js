@@ -201,6 +201,7 @@ function card(item, hero = false) {
       <div class="value">${escape(fmtValue(item.value, item.unit))}</div>
       <div class="delta ${d.dir}">${escape(d.text)}</div>
       <div class="meta">기준 ${escape(item.date || "")}</div>
+      ${rateHistoryBlock(item)}
       ${reasonBlock(item)}
       ${statsBlock(item)}
     </article>`;
@@ -221,6 +222,21 @@ const ALWAYS_REASON_IDS = new Set([
   "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
   "amd", "palantir", "coinbase",
 ]);
+
+// 금리 카드용 history 표시 (직전 변경 2회 + 현재). 다른 카드는 빈 문자열.
+const RATE_HISTORY_IDS = new Set(["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"]);
+
+function rateHistoryBlock(item) {
+  if (!RATE_HISTORY_IDS.has(item?.id)) return "";
+  const h = item?.history;
+  if (!Array.isArray(h) || h.length === 0) return "";
+  const rows = h.slice(0, 3).map((p, i) => {
+    const cls = i === 0 ? "now" : "";
+    const label = i === 0 ? "현재" : i === 1 ? "직전" : "그 이전";
+    return `<div class="rate-row ${cls}"><span class="rate-label">${escape(label)}</span><span class="rate-date">${escape(p.date || "")}</span><span class="rate-value">${escape(fmtValue(p.value, item.unit))}</span></div>`;
+  }).join("");
+  return `<div class="rate-history">${rows}</div>`;
+}
 
 function reasonBlock(item) {
   // Empty placeholder — populated client-side via /api/reasons (lazy load)
@@ -541,6 +557,13 @@ export function renderHtml(snapshot, _news, calendar) {
   .bar:hover { opacity: 0.75; }
   .bar.selected { stroke: var(--text); stroke-width: 1.2; }
   .ko-badge { display: inline-block; font-size: 9px; font-weight: 700; color: var(--kr); background: rgba(59,130,246,0.15); padding: 1px 5px; border-radius: 4px; margin-right: 6px; vertical-align: middle; letter-spacing: 0.04em; }
+  .rate-history { margin-top: 9px; padding: 7px 9px; border: 1px dashed var(--border); border-radius: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 11px; }
+  .rate-row { display: grid; grid-template-columns: minmax(40px, auto) 1fr minmax(48px, auto); gap: 6px; align-items: baseline; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .rate-row.now { color: var(--text); font-weight: 600; }
+  .rate-label { font-weight: 700; font-size: 9px; letter-spacing: 0.04em; color: var(--muted); }
+  .rate-row.now .rate-label { color: var(--kr); }
+  .rate-date { color: var(--muted); font-size: 10px; }
+  .rate-value { text-align: right; }
   .h2-hint { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
   .cal-today { background: var(--card); border: 1px solid var(--kr); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; box-shadow: 0 0 0 1px rgba(59,130,246,0.18); }
   .cal-today-head { font-size: 12px; font-weight: 700; color: var(--kr); margin-bottom: 8px; letter-spacing: 0.04em; }

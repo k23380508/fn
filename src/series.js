@@ -37,11 +37,6 @@ export const SERIES_REGISTRY = {
   nvidia:       { source: "yahoo", symbol: "NVDA" },
   google:       { source: "yahoo", symbol: "GOOGL" },
   amazon:       { source: "yahoo", symbol: "AMZN" },
-  tencent:      { source: "yahoo", symbol: "0700.HK" },
-  alibaba:      { source: "yahoo", symbol: "BABA" },
-  baidu:        { source: "yahoo", symbol: "9888.HK" },
-  xiaomi:       { source: "yahoo", symbol: "1810.HK" },
-  byd:          { source: "yahoo", symbol: "1211.HK" },
 };
 
 function computeYoy(ascSeries) {

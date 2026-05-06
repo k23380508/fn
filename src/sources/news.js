@@ -6,8 +6,6 @@ const AI_URL = "https://news.google.com/rss/search?q=%22AI%22+OR+OpenAI+OR+Anthr
 const KR_TECH_URL = "https://news.google.com/rss/search?q=(%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90+OR+SK%ED%95%98%EC%9D%B4%EB%8B%89%EC%8A%A4+OR+%EB%84%A4%EC%9D%B4%EB%B2%84+OR+%EC%B9%B4%EC%B9%B4%EC%98%A4+OR+%EC%97%90%EB%84%88%EC%A7%80%EC%86%94%EB%A3%A8%EC%85%98)+(%EC%A3%BC%EA%B0%80+OR+%EC%8B%A4%EC%A0%81+OR+%ED%88%AC%EC%9E%90+OR+%EB%AA%A9%ED%91%9C%EA%B0%80+OR+%EB%A7%A4%EC%88%98+OR+%EB%A7%A4%EB%8F%84)&hl=ko&gl=KR&ceid=KR:ko&when=2d";
 // 미국 빅테크 — Magnificent 5 + stock/earnings 키워드
 const US_TECH_URL = "https://news.google.com/rss/search?q=(Apple+OR+Microsoft+OR+NVIDIA+OR+Alphabet+OR+Google+OR+Amazon)+(stock+OR+earnings+OR+price+OR+%22share+price%22+OR+target+OR+upgrade+OR+downgrade)&hl=en&gl=US&ceid=US:en&when=2d";
-// 중국 빅테크 — 종목명 + stock/earnings 키워드
-const CN_TECH_URL = "https://news.google.com/rss/search?q=(Tencent+OR+Alibaba+OR+Baidu+OR+Xiaomi+OR+BYD)+(stock+OR+earnings+OR+price+OR+%22share+price%22+OR+target)&hl=en&gl=US&ceid=US:en&when=2d";
 
 function decodeEntities(s) {
   return (s || "")
@@ -60,13 +58,12 @@ async function fetchSection(url, limit) {
 }
 
 export async function buildNews(env, { limit = 5 } = {}) {
-  const [krRes, usRes, aiRes, krTechRes, usTechRes, cnTechRes] = await Promise.allSettled([
+  const [krRes, usRes, aiRes, krTechRes, usTechRes] = await Promise.allSettled([
     fetchSection(KR_URL, limit),
     fetchSection(US_URL, limit),
     fetchSection(AI_URL, limit),
     fetchSection(KR_TECH_URL, limit),
     fetchSection(US_TECH_URL, limit),
-    fetchSection(CN_TECH_URL, limit),
   ]);
   const pack = (r) => r.status === "fulfilled" ? r.value : { error: r.reason?.message || String(r.reason) };
   return {
@@ -76,6 +73,5 @@ export async function buildNews(env, { limit = 5 } = {}) {
     ai: pack(aiRes),
     kr_tech: pack(krTechRes),
     us_tech: pack(usTechRes),
-    cn_tech: pack(cnTechRes),
   };
 }

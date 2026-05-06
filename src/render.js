@@ -50,7 +50,6 @@ const CHARTABLE_IDS = new Set([
   "gold", "silver", "copper", "btc",
   "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
   "apple", "microsoft", "nvidia", "google", "amazon",
-  "tencent", "alibaba", "baidu", "xiaomi", "byd",
 ]);
 
 const ALERT_PCT = 3;
@@ -319,7 +318,6 @@ export function renderHtml(snapshot, news, calendar) {
   const assetIds = ["gold", "silver", "copper", "btc"];
   const krTechIds = ["samsung", "sk_hynix", "naver", "kakao", "lg_energy"];
   const usTechIds = ["apple", "microsoft", "nvidia", "google", "amazon"];
-  const cnTechIds = ["tencent", "alibaba", "baidu", "xiaomi", "byd"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
   const equityHtml = equityIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
@@ -329,7 +327,6 @@ export function renderHtml(snapshot, news, calendar) {
   const assetHtml = assetIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const krTechHtml = krTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const usTechHtml = usTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
-  const cnTechHtml = cnTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
 
   return `<!doctype html>
 <html lang="ko">
@@ -572,14 +569,10 @@ export function renderHtml(snapshot, news, calendar) {
   <h2>미국 빅테크 (US Big Tech)</h2>
   <div class="grid five">${usTechHtml}</div>
 
-  <h2>중국 빅테크 (China Tech)</h2>
-  <div class="grid five">${cnTechHtml}</div>
-
   <h2>빅테크 핵심 뉴스 <span class="h2-hint">(주가 영향 키워드 필터)</span></h2>
-  <div class="news-grid">
+  <div class="news-grid news-grid-2">
     ${newsSection("한국 빅테크 뉴스", "🇰🇷", news?.kr_tech)}
     ${newsSection("미국 빅테크 뉴스", "🇺🇸", news?.us_tech)}
-    ${newsSection("중국 빅테크 뉴스", "🇨🇳", news?.cn_tech)}
   </div>
 
   <h2>핫 뉴스</h2>

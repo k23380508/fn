@@ -114,12 +114,6 @@ const STATIC_ANALYSIS = {
   google:       "검색 광고 견조 + Gemini AI 수익화 가시화 + 자율주행(Waymo) 가치 재평가로 +9% 급등.",
   amazon:       "AWS 가속 + 광고 매출 두 자릿수 성장 + 1분기 실적 호조로 신고가 시도. 공급망 서비스 신사업 발표.",
 
-  // 중국 빅테크
-  tencent:      "위챗·게임 성장 둔화와 중국 규제 리스크 재부각으로 약세. 1Y -X% 하락 추세 지속.",
-  alibaba:      "Morgan Stanley가 'AI race biggest winner' 부각하며 모멘텀 회복 시도. 클라우드·AI 매출 성장률이 핵심.",
-  baidu:        "검색 점유율 압박과 자율주행 상업화 지연으로 박스권. AI 검색 차별화가 분기점.",
-  xiaomi:       "SU7 EV 판매 호조와 가전 IoT 매출 성장으로 강세. 다만 중국 EV 가격경쟁 격화 부담.",
-  byd:          "8개월 연속 EV 판매 감소로 -4.7% 급락. 가격경쟁과 마진 압박이 단기 약세 요인.",
 };
 
 async function fetchOne(input, env) {

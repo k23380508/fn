@@ -181,11 +181,6 @@ const BIGTECH = [
   { id: "nvidia",    region: "US_TECH", symbol: "NVDA",      label: "NVIDIA",             unit: "$" },
   { id: "google",    region: "US_TECH", symbol: "GOOGL",     label: "Alphabet (Google)",  unit: "$" },
   { id: "amazon",    region: "US_TECH", symbol: "AMZN",      label: "Amazon",             unit: "$" },
-  { id: "tencent",   region: "CN",      symbol: "0700.HK",   label: "텐센트 (Tencent)",    unit: "HK$" },
-  { id: "alibaba",   region: "CN",      symbol: "BABA",      label: "알리바바 (Alibaba)",  unit: "$" },
-  { id: "baidu",     region: "CN",      symbol: "9888.HK",   label: "바이두 (Baidu)",      unit: "HK$" },
-  { id: "xiaomi",    region: "CN",      symbol: "1810.HK",   label: "샤오미 (Xiaomi)",     unit: "HK$" },
-  { id: "byd",       region: "CN",      symbol: "1211.HK",   label: "BYD",                unit: "HK$" },
 ];
 
 function makeBigtechBuilder(t) {
@@ -231,7 +226,6 @@ export async function buildSnapshot(env) {
     "gold", "silver", "copper", "btc",
     "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
     "apple", "microsoft", "nvidia", "google", "amazon",
-    "tencent", "alibaba", "baidu", "xiaomi", "byd",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });
   await enrichWithStats(items, env);

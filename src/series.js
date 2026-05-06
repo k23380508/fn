@@ -47,6 +47,14 @@ export const SERIES_REGISTRY = {
   nvidia:       { source: "yahoo", symbol: "NVDA" },
   google:       { source: "yahoo", symbol: "GOOGL" },
   amazon:       { source: "yahoo", symbol: "AMZN" },
+  meta:         { source: "yahoo", symbol: "META" },
+  tesla:        { source: "yahoo", symbol: "TSLA" },
+  broadcom:     { source: "yahoo", symbol: "AVGO" },
+  berkshire:    { source: "yahoo", symbol: "BRK-B" },
+  jpmorgan:     { source: "yahoo", symbol: "JPM" },
+  amd:          { source: "yahoo", symbol: "AMD" },
+  palantir:     { source: "yahoo", symbol: "PLTR" },
+  coinbase:     { source: "yahoo", symbol: "COIN" },
 };
 
 function computeYoy(ascSeries) {

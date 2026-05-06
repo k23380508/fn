@@ -190,12 +190,21 @@ const BIGTECH = [
   { id: "krafton",      region: "KR_TECH", symbol: "259960.KS", label: "크래프톤",            unit: "원" },
   { id: "ecopro_bm",    region: "KR_TECH", symbol: "247540.KQ", label: "에코프로비엠",        unit: "원" },
   { id: "alteogen",     region: "KR_TECH", symbol: "196170.KQ", label: "알테오젠",            unit: "원" },
-  // US_TECH (Magnificent 5)
-  { id: "apple",     region: "US_TECH", symbol: "AAPL",      label: "Apple",              unit: "$" },
-  { id: "microsoft", region: "US_TECH", symbol: "MSFT",      label: "Microsoft",          unit: "$" },
-  { id: "nvidia",    region: "US_TECH", symbol: "NVDA",      label: "NVIDIA",             unit: "$" },
-  { id: "google",    region: "US_TECH", symbol: "GOOGL",     label: "Alphabet (Google)",  unit: "$" },
-  { id: "amazon",    region: "US_TECH", symbol: "AMZN",      label: "Amazon",             unit: "$" },
+  // US_TECH 시총 top 10
+  { id: "apple",     region: "US_TECH", symbol: "AAPL",  label: "Apple",                unit: "$" },
+  { id: "microsoft", region: "US_TECH", symbol: "MSFT",  label: "Microsoft",            unit: "$" },
+  { id: "nvidia",    region: "US_TECH", symbol: "NVDA",  label: "NVIDIA",               unit: "$" },
+  { id: "google",    region: "US_TECH", symbol: "GOOGL", label: "Alphabet (Google)",    unit: "$" },
+  { id: "amazon",    region: "US_TECH", symbol: "AMZN",  label: "Amazon",               unit: "$" },
+  { id: "meta",      region: "US_TECH", symbol: "META",  label: "Meta (Facebook)",      unit: "$" },
+  { id: "tesla",     region: "US_TECH", symbol: "TSLA",  label: "Tesla",                unit: "$" },
+  { id: "broadcom",  region: "US_TECH", symbol: "AVGO",  label: "Broadcom",             unit: "$" },
+  { id: "berkshire", region: "US_TECH", symbol: "BRK-B", label: "Berkshire Hathaway",   unit: "$" },
+  { id: "jpmorgan",  region: "US_TECH", symbol: "JPM",   label: "JPMorgan Chase",       unit: "$" },
+  // US_MOVERS — 변동성 후보 풀 (시총 무관, 변동성 폭 큰 종목)
+  { id: "amd",       region: "US_TECH", symbol: "AMD",   label: "AMD",                  unit: "$" },
+  { id: "palantir",  region: "US_TECH", symbol: "PLTR",  label: "Palantir",             unit: "$" },
+  { id: "coinbase",  region: "US_TECH", symbol: "COIN",  label: "Coinbase",             unit: "$" },
 ];
 
 function makeBigtechBuilder(t) {
@@ -243,6 +252,8 @@ export async function buildSnapshot(env) {
     "kia", "naver", "celltrion", "posco", "kakao",
     "hanwha_aero", "doosan_ener", "krafton", "ecopro_bm", "alteogen",
     "apple", "microsoft", "nvidia", "google", "amazon",
+    "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
+    "amd", "palantir", "coinbase",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });
   await enrichWithStats(items, env);

@@ -339,45 +339,22 @@ function calendarSection(calendar) {
   // KST 기준 오늘 epochDay
   const now = new Date(Date.now() + 9 * 3600 * 1000);
   const todayEpoch = Math.floor(now.getTime() / 86400000);
-  // 어제·오늘·내일 (todayEpoch ±1)만 필터
-  const sorted = [...events]
-    .filter((e) => {
-      const k = kstParts(e.date);
-      if (!k) return false;
-      return Math.abs(k.epochDay - todayEpoch) <= 1;
-    })
+  // 오늘만 필터
+  const todayList = [...events]
+    .filter((e) => kstParts(e.date)?.epochDay === todayEpoch)
     .sort((a, b) => new Date(a.date) - new Date(b.date));
-  if (!sorted.length) {
-    return `<h2>📅 경제지표 발표 <span class="h2-hint">(어제·오늘·내일, High/Medium impact, KST)</span></h2><div class="meta">어제·오늘·내일 발표 없음.</div>`;
+  const heading = `<h2>📅 경제지표 발표 <span class="h2-hint">(오늘, High/Medium impact, KST)</span></h2>`;
+  if (!todayList.length) {
+    return `${heading}<div class="cal-today"><div class="cal-today-head">📌 오늘 발표 없음</div></div>`;
   }
-  const todayList = sorted.filter((e) => kstParts(e.date)?.epochDay === todayEpoch);
-  // 일별 그룹 (어제/오늘/내일)
-  const byDay = new Map();
-  for (const e of sorted) {
-    const k = kstParts(e.date);
-    if (!k) continue;
-    const key = `${k.yyyy}-${k.mm}-${k.dd}`;
-    if (!byDay.has(key)) byDay.set(key, { dow: k.dow, epochDay: k.epochDay, items: [] });
-    byDay.get(key).items.push(e);
-  }
-  const todayBlock = todayList.length
-    ? `<div class="cal-today"><div class="cal-today-head">📌 오늘 (${escape(`${kstParts(todayList[0].date).mm}/${kstParts(todayList[0].date).dd} ${kstParts(todayList[0].date).dow}`)})</div><ul class="cal-list">${todayList.map(calendarEventRow).join("")}</ul></div>`
-    : `<div class="cal-today"><div class="cal-today-head">📌 오늘 발표 없음</div></div>`;
-  const weekBlock = Array.from(byDay.entries()).map(([key, { dow, epochDay, items }]) => {
-    const offset = epochDay - todayEpoch;
-    const dayLabel = offset === -1 ? "어제" : offset === 0 ? "오늘" : "내일";
-    const md = key.slice(5);
-    return `
-      <div class="cal-day${offset === 0 ? " today" : ""}">
-        <div class="cal-day-head"><strong>${escape(dayLabel)}</strong> ${escape(md.replace("-", "/"))} <span class="cal-dow">${escape(dow)}</span> <span class="cal-cnt">${items.length}건</span></div>
-        <ul class="cal-list">${items.map(calendarEventRow).join("")}</ul>
-      </div>`;
-  }).join("");
+  const head = kstParts(todayList[0].date);
+  const todayLabel = `${head.mm}/${head.dd} ${head.dow}`;
   return `
-    <h2>📅 경제지표 발표 <span class="h2-hint">(어제·오늘·내일, High/Medium impact, KST)</span></h2>
-    ${todayBlock}
-    <div class="cal-week-head">📆 어제 / 오늘 / 내일</div>
-    <div class="cal-week">${weekBlock}</div>`;
+    ${heading}
+    <div class="cal-today">
+      <div class="cal-today-head">📌 오늘 (${escape(todayLabel)}) — ${todayList.length}건</div>
+      <ul class="cal-list">${todayList.map(calendarEventRow).join("")}</ul>
+    </div>`;
 }
 
 export function renderHtml(snapshot, _news, calendar) {

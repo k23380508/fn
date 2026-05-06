@@ -6,6 +6,19 @@ function escape(s) {
     .replace(/"/g, "&quot;");
 }
 
+// Reject anything that isn't an http(s) URL — defends against javascript:, data:,
+// vbscript: and other dangerous schemes from untrusted RSS/feed data.
+function safeLink(s) {
+  if (!s) return "";
+  try {
+    const u = new URL(s);
+    if (u.protocol === "http:" || u.protocol === "https:") return s;
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 function fmtValue(v, unit) {
   if (!Number.isFinite(v)) return "—";
   const abs = Math.abs(v);
@@ -165,6 +178,15 @@ function reasonBlock(item) {
   return `<div class="reason-slot" data-reason-for="${escape(item.id)}"></div>`;
 }
 
+// Build an anchor or div HTML safely — only http(s) URLs become anchors.
+function safeAnchor(href, classes, attrs, inner) {
+  const safe = safeLink(href);
+  if (safe) {
+    return `<a href="${escape(safe)}" target="_blank" rel="noopener noreferrer" class="${classes}" ${attrs}>${inner}</a>`;
+  }
+  return `<div class="${classes}" ${attrs}>${inner}</div>`;
+}
+
 function fmtPubDate(s) {
   if (!s) return "";
   try {
@@ -193,9 +215,14 @@ function newsSection(title, flagEmoji, items) {
   }
   const list = items.slice(0, 5).map((n) => {
     const transBadge = n.translated ? '<span class="ko-badge" title="한국어 자동 번역">KO</span>' : "";
+    const safe = safeLink(n.link);
+    const linkOpen = safe
+      ? `<a href="${escape(safe)}" target="_blank" rel="noopener noreferrer" class="news-link">`
+      : `<span class="news-link">`;
+    const linkClose = safe ? `</a>` : `</span>`;
     return `
     <li class="news-item">
-      <a href="${escape(n.link)}" target="_blank" rel="noopener noreferrer" class="news-link">${transBadge}${escape(n.title)}</a>
+      ${linkOpen}${transBadge}${escape(n.title)}${linkClose}
       <div class="news-meta">${escape(n.source || "")}${n.source && n.pubDate ? " · " : ""}${escape(fmtPubDate(n.pubDate))}</div>
     </li>`;
   }).join("");
@@ -861,6 +888,13 @@ export function renderHtml(snapshot, news, calendar) {
   function escapeHtml(s) {
     return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  function safeUrl(s) {
+    if (!s) return "";
+    try {
+      var u = new URL(s);
+      return (u.protocol === "http:" || u.protocol === "https:") ? s : "";
+    } catch (_) { return ""; }
+  }
   function loadReasons() {
     var slots = Array.prototype.slice.call(document.querySelectorAll(".reason-slot[data-reason-for]"));
     if (!slots.length) return;
@@ -878,10 +912,11 @@ export function renderHtml(snapshot, news, calendar) {
           var koBadge = r.translated ? '<span class="ko-badge" title="한국어 자동 번역">KO</span>' : "";
           var aiBadge = r.analysis ? '<span class="ai-badge" title="AI가 여러 뉴스를 종합해 작성한 변동 원인 요약">AI</span>' : "";
           var src = r.source ? '<span class="reason-source" title="원문 출처">' + escapeHtml(r.source) + '</span>' : "";
-          var attrs = r.link
-            ? 'href="' + escapeHtml(r.link) + '" target="_blank" rel="noopener noreferrer"'
+          var safeHref = safeUrl(r.link);
+          var attrs = safeHref
+            ? 'href="' + escapeHtml(safeHref) + '" target="_blank" rel="noopener noreferrer"'
             : "";
-          var tag = r.link ? "a" : "div";
+          var tag = safeHref ? "a" : "div";
           var icon = r.analysis ? "💡" : "📰";
           var titleAttr = r.analysis ? "AI 변동 원인 분석 — 클릭 시 배경 뉴스 원문" : "배경 뉴스 원문 보기";
           slot.innerHTML = "<" + tag + " " + attrs + ' class="reason-link' + (r.analysis ? ' analysis' : '') + '" onclick="event.stopPropagation()" title="' + titleAttr + '">' +

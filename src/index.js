@@ -6,6 +6,30 @@ import { buildNews } from "./sources/news.js";
 import { buildReasonsFor } from "./sources/reasons.js";
 import { buildCalendar } from "./sources/calendar.js";
 
+// OWASP-aligned baseline security headers added to every response.
+const SECURITY_HEADERS = {
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "SAMEORIGIN",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+  "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+  // CSP: page uses inline script + style for charts/modals, so allow self+inline.
+  // Restricts loading of external scripts/iframes; img/connect kept open for self-fetched APIs.
+  "Content-Security-Policy":
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline'; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "img-src 'self' data:; " +
+    "connect-src 'self'; " +
+    "frame-ancestors 'self'; " +
+    "base-uri 'self'; " +
+    "form-action 'self'",
+};
+
+function withSecurity(headers = {}) {
+  return { ...SECURITY_HEADERS, ...headers };
+}
+
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
@@ -45,8 +69,7 @@ async function getOrBuildCalendar(env, { force = false } = {}) {
   return fresh;
 }
 
-export default {
-  async fetch(request, env) {
+async function handleRequest(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === "/healthz") {
@@ -207,5 +230,26 @@ export default {
     }
 
     return new Response("Not Found", { status: 404 });
+}
+
+function applySecurityHeaders(res) {
+  const h = new Headers(res.headers);
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) {
+    if (!h.has(k)) h.set(k, v);
+  }
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+}
+
+export default {
+  async fetch(request, env, ctx) {
+    try {
+      const res = await handleRequest(request, env);
+      return applySecurityHeaders(res);
+    } catch (e) {
+      return applySecurityHeaders(new Response(`<pre>error: ${e.message}</pre>`, {
+        status: 500,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      }));
+    }
   },
 };

@@ -365,16 +365,14 @@ export function renderHtml(snapshot, _news, calendar) {
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
   const assetIds = ["gold", "silver", "copper", "btc"];
-  // 한국 빅테크 5개 = 시총 풀 |Δ| top 3 + movers 풀 max+ 1 + max- 1 (dedupe)
+  // 한국 빅테크 4개 = 시총 풀 |Δ| top 3 + movers 풀 max- 1 (dedupe)
   const krTop3 = pickTopMovers(byId, KR_TECH_POOL, 3);
-  const krGain = pickMaxGain(byId, KR_MOVERS_POOL);
   const krLoss = pickMaxLoss(byId, KR_MOVERS_POOL);
-  const krTechIds = [...new Set([...krTop3, krGain, krLoss].filter(Boolean))];
-  // 미국 빅테크 5개 = 동일 패턴
+  const krTechIds = [...new Set([...krTop3, krLoss].filter(Boolean))];
+  // 미국 빅테크 4개 = 동일 패턴
   const usTop3 = pickTopMovers(byId, US_TECH_POOL, 3);
-  const usGain = pickMaxGain(byId, US_MOVERS_POOL);
   const usLoss = pickMaxLoss(byId, US_MOVERS_POOL);
-  const usTechIds = [...new Set([...usTop3, usGain, usLoss].filter(Boolean))];
+  const usTechIds = [...new Set([...usTop3, usLoss].filter(Boolean))];
   const usEtfIds = ["arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
@@ -621,11 +619,11 @@ export function renderHtml(snapshot, _news, calendar) {
   <h2>원자재 & 가상자산</h2>
   <div class="grid four">${assetHtml}</div>
 
-  <h2>한국 빅테크 (K-Tech) <span class="h2-hint">시총 top 10 중 변동 큰 3개 + 시장 max상승 1 + max하락 1</span></h2>
-  <div class="grid five">${krTechHtml}</div>
+  <h2>한국 빅테크 (K-Tech) <span class="h2-hint">시총 top 10 중 변동 큰 3개 + 시장 max하락 1</span></h2>
+  <div class="grid four">${krTechHtml}</div>
 
-  <h2>미국 빅테크 (US Big Tech) <span class="h2-hint">시총 top 10 중 변동 큰 3개 + 시장 max상승 1 + max하락 1</span></h2>
-  <div class="grid five">${usTechHtml}</div>
+  <h2>미국 빅테크 (US Big Tech) <span class="h2-hint">시총 top 10 중 변동 큰 3개 + 시장 max하락 1</span></h2>
+  <div class="grid four">${usTechHtml}</div>
 
   <h2>미국 ETF</h2>
   <div class="grid five">${usEtfHtml}</div>

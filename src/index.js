@@ -2,7 +2,6 @@ import { buildSnapshot } from "./snapshot.js";
 import { renderHtml } from "./render.js";
 import { getCached, putCached } from "./kv.js";
 import { fetchSeries, RANGES, SERIES_REGISTRY } from "./series.js";
-import { buildNews } from "./sources/news.js";
 import { buildReasonsFor } from "./sources/reasons.js";
 import { buildCalendar } from "./sources/calendar.js";
 
@@ -33,8 +32,6 @@ function withSecurity(headers = {}) {
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
-const NEWS_KEY = "news:v6:latest";
-const NEWS_TTL = 900;      // 15 minutes
 const REASON_TTL = 86400;  // 24 hours per id (static analysis stable for the day)
 const CALENDAR_KEY = "calendar:v4:thisweek";
 const CALENDAR_TTL = 3600; // 1 hour
@@ -47,16 +44,6 @@ async function getOrBuildSnapshot(env, { force = false } = {}) {
   const fresh = await buildSnapshot(env);
   await putCached(SNAPSHOT_KEY, fresh, env, SNAPSHOT_TTL);
   return { snapshot: fresh, source: "fresh" };
-}
-
-async function getOrBuildNews(env, { force = false } = {}) {
-  if (!force) {
-    const cached = await getCached(NEWS_KEY, env);
-    if (cached?.generatedAt) return cached;
-  }
-  const fresh = await buildNews(env);
-  await putCached(NEWS_KEY, fresh, env, NEWS_TTL);
-  return fresh;
 }
 
 async function getOrBuildCalendar(env, { force = false } = {}) {
@@ -191,29 +178,13 @@ async function handleRequest(request, env) {
       }
     }
 
-    if (url.pathname === "/api/news") {
+if (url.pathname === "/" || url.pathname === "") {
       try {
-        const force = url.searchParams.get("fresh") === "1";
-        const news = await getOrBuildNews(env, { force });
-        return new Response(JSON.stringify(news), {
-          headers: { "content-type": "application/json; charset=utf-8", "cache-control": "public, max-age=300" },
-        });
-      } catch (e) {
-        return new Response(JSON.stringify({ error: e.message }), {
-          status: 500,
-          headers: { "content-type": "application/json; charset=utf-8" },
-        });
-      }
-    }
-
-    if (url.pathname === "/" || url.pathname === "") {
-      try {
-        const [{ snapshot, source }, news, calendar] = await Promise.all([
+        const [{ snapshot, source }, calendar] = await Promise.all([
           getOrBuildSnapshot(env),
-          getOrBuildNews(env).catch((e) => ({ kr: { error: e.message }, us: { error: e.message } })),
           getOrBuildCalendar(env).catch((e) => ({ error: e.message, events: [] })),
         ]);
-        const html = renderHtml(snapshot, news, calendar);
+        const html = renderHtml(snapshot, null, calendar);
         return new Response(html, {
           headers: {
             "content-type": "text/html; charset=utf-8",

@@ -82,7 +82,7 @@ Repo: https://github.com/k23380508/mp1
 
 ```
 src/
-├── index.js        라우터 (/, /api/snapshot, /api/series, /api/news, /api/reasons, /api/calendar, /healthz, /favicon.{ico,svg})
+├── index.js        라우터 (/, /api/snapshot, /api/series, /api/reasons, /api/calendar, /healthz, /favicon.{ico,svg})
 ├── render.js       HTML 렌더링 + 모달 클라 JS + CHARTABLE_IDS Set
 ├── snapshot.js     19개 KR/US 거시 지표 집계 (BUILDERS + order)
 ├── series.js       SERIES_REGISTRY + fetchSeries(id, range) — 차트 모달용 시계열 (1M/3M/6M/1Y/5Y, YoY 자동 계산)
@@ -92,9 +92,8 @@ src/
     ├── fred.js     FRED (St. Louis Fed)
     ├── yahoo.js    Yahoo Finance v8 chart (single quote + series)
     ├── coingecko.js CoinGecko (BTC fallback)
-    ├── news.js     Google News RSS (KR/US 경제 뉴스 5개씩)
     ├── reasons.js  STATIC_ANALYSIS 매핑 (외부 AI 없음, 직접 작성한 한 줄 변동 원인)
-    └── calendar.js Forex Factory 경제지표 일정 JSON (High/Medium impact, USD/EUR/JPY/GBP/CNY/KRW)
+    └── calendar.js Forex Factory 경제지표 일정 JSON (어제·오늘·내일, USD/KRW)
 ```
 
 ## 바인딩 / 환경

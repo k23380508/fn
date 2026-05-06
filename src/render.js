@@ -243,48 +243,6 @@ function safeAnchor(href, classes, attrs, inner) {
   return `<div class="${classes}" ${attrs}>${inner}</div>`;
 }
 
-function fmtPubDate(s) {
-  if (!s) return "";
-  try {
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return s;
-    const now = Date.now();
-    const diffMin = Math.round((now - d.getTime()) / 60000);
-    if (diffMin < 1) return "방금 전";
-    if (diffMin < 60) return `${diffMin}분 전`;
-    const diffH = Math.round(diffMin / 60);
-    if (diffH < 24) return `${diffH}시간 전`;
-    const diffD = Math.round(diffH / 24);
-    if (diffD < 7) return `${diffD}일 전`;
-    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-  } catch {
-    return s;
-  }
-}
-
-function newsSection(title, flagEmoji, items) {
-  if (items?.error) {
-    return `<section class="news-col"><h2>${flagEmoji} ${escape(title)}</h2><div class="meta err-msg">뉴스 로드 실패: ${escape(items.error)}</div></section>`;
-  }
-  if (!Array.isArray(items) || !items.length) {
-    return `<section class="news-col"><h2>${flagEmoji} ${escape(title)}</h2><div class="meta">뉴스 없음</div></section>`;
-  }
-  const list = items.slice(0, 5).map((n) => {
-    const transBadge = n.translated ? '<span class="ko-badge" title="한국어 자동 번역">KO</span>' : "";
-    const safe = safeLink(n.link);
-    const linkOpen = safe
-      ? `<a href="${escape(safe)}" target="_blank" rel="noopener noreferrer" class="news-link">`
-      : `<span class="news-link">`;
-    const linkClose = safe ? `</a>` : `</span>`;
-    return `
-    <li class="news-item">
-      ${linkOpen}${transBadge}${escape(n.title)}${linkClose}
-      <div class="news-meta">${escape(n.source || "")}${n.source && n.pubDate ? " · " : ""}${escape(fmtPubDate(n.pubDate))}</div>
-    </li>`;
-  }).join("");
-  return `<section class="news-col"><h2>${flagEmoji} ${escape(title)}</h2><ul class="news-list">${list}</ul></section>`;
-}
-
 function fmtKst(iso) {
   try {
     const d = new Date(iso);
@@ -398,7 +356,7 @@ function calendarSection(calendar) {
     <div class="cal-week">${weekBlock}</div>`;
 }
 
-export function renderHtml(snapshot, news, calendar) {
+export function renderHtml(snapshot, _news, calendar) {
   const byId = Object.fromEntries(snapshot.items.map((i) => [i.id, i]));
   const heroIds = ["usd_krw", "vix"];
   const equityIds = ["kospi", "kosdaq", "sp500", "nasdaq"];
@@ -582,19 +540,7 @@ export function renderHtml(snapshot, news, calendar) {
   .bar { transition: opacity 0.12s; cursor: pointer; }
   .bar:hover { opacity: 0.75; }
   .bar.selected { stroke: var(--text); stroke-width: 1.2; }
-  .news-grid { display: grid; grid-template-columns: 1fr; gap: 20px; margin-top: 12px; }
-  .news-col h2 { margin-top: 0; }
-  .news-list { list-style: none; padding: 0; margin: 0; }
-  .news-item { padding: 11px 0; border-bottom: 1px solid var(--border); }
-  .news-item:last-child { border-bottom: none; padding-bottom: 0; }
-  .news-link { color: var(--text); text-decoration: none; font-size: 14px; line-height: 1.45; display: block; }
-  .news-link:hover { color: var(--kr); text-decoration: underline; }
-  .news-meta { color: var(--muted); font-size: 11px; margin-top: 5px; }
   .ko-badge { display: inline-block; font-size: 9px; font-weight: 700; color: var(--kr); background: rgba(59,130,246,0.15); padding: 1px 5px; border-radius: 4px; margin-right: 6px; vertical-align: middle; letter-spacing: 0.04em; }
-  @media (min-width: 768px) {
-    .news-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
-    .news-grid.news-grid-2 { grid-template-columns: repeat(2, 1fr); }
-  }
   .h2-hint { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
   .cal-today { background: var(--card); border: 1px solid var(--kr); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; box-shadow: 0 0 0 1px rgba(59,130,246,0.18); }
   .cal-today-head { font-size: 12px; font-weight: 700; color: var(--kr); margin-bottom: 8px; letter-spacing: 0.04em; }
@@ -666,19 +612,6 @@ export function renderHtml(snapshot, news, calendar) {
 
   <h2>미국 빅테크 (US Big Tech) <span class="h2-hint">시총 top 10 중 변동 큰 3개 + 시장 max상승 1 + max하락 1</span></h2>
   <div class="grid five">${usTechHtml}</div>
-
-  <h2>빅테크 핵심 뉴스 <span class="h2-hint">(주가 영향 키워드 필터)</span></h2>
-  <div class="news-grid news-grid-2">
-    ${newsSection("한국 빅테크 뉴스", "🇰🇷", news?.kr_tech)}
-    ${newsSection("미국 빅테크 뉴스", "🇺🇸", news?.us_tech)}
-  </div>
-
-  <h2>핫 뉴스</h2>
-  <div class="news-grid">
-    ${newsSection("한국 톱 뉴스", "🇰🇷", news?.kr)}
-    ${newsSection("미국 톱 뉴스", "🇺🇸", news?.us)}
-    ${newsSection("AI 뉴스", "🤖", news?.ai)}
-  </div>
 
   <footer>
     <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko · Google News</div>

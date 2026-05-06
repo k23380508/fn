@@ -61,9 +61,25 @@ const CHARTABLE_IDS = new Set([
   "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
   "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
   "gold", "silver", "copper", "btc",
-  "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
+  "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
+  "kia", "naver", "celltrion", "posco", "kakao",
   "apple", "microsoft", "nvidia", "google", "amazon",
 ]);
+
+// 한국 빅테크 풀 — render 시점에 |Δ| 큰 top 5만 표시
+const KR_TECH_POOL = [
+  "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
+  "kia", "naver", "celltrion", "posco", "kakao",
+];
+
+function pickTopMovers(byId, pool, n = 5) {
+  return pool
+    .map((id) => byId[id])
+    .filter((it) => it && !it.error && Number.isFinite(it?.delta?.pct))
+    .sort((a, b) => Math.abs(b.delta.pct) - Math.abs(a.delta.pct))
+    .slice(0, n)
+    .map((it) => it.id);
+}
 
 const ALERT_PCT = 3;
 
@@ -343,7 +359,8 @@ export function renderHtml(snapshot, news, calendar) {
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
   const assetIds = ["gold", "silver", "copper", "btc"];
-  const krTechIds = ["samsung", "sk_hynix", "naver", "kakao", "lg_energy"];
+  // 매 snapshot 갱신마다 한국 빅테크 풀(시총 10) 중 |Δ| top 5 동적 선정
+  const krTechIds = pickTopMovers(byId, KR_TECH_POOL, 5);
   const usTechIds = ["apple", "microsoft", "nvidia", "google", "amazon"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
@@ -590,7 +607,7 @@ export function renderHtml(snapshot, news, calendar) {
   <h2>원자재 & 가상자산</h2>
   <div class="grid four">${assetHtml}</div>
 
-  <h2>한국 빅테크 (K-Tech)</h2>
+  <h2>한국 빅테크 (K-Tech) <span class="h2-hint">시총 top 10 풀에서 일일 변동률 큰 5개</span></h2>
   <div class="grid five">${krTechHtml}</div>
 
   <h2>미국 빅테크 (US Big Tech)</h2>

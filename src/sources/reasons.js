@@ -23,9 +23,14 @@ const QUERIES = {
   // 빅테크
   samsung:      { q: "삼성전자 주가", ko: true },
   sk_hynix:     { q: "SK하이닉스 주가", ko: true },
-  naver:        { q: "네이버 NAVER 주가", ko: true },
-  kakao:        { q: "카카오 Kakao 주가", ko: true },
   lg_energy:    { q: "LG에너지솔루션 주가", ko: true },
+  samsung_bio:  { q: "삼성바이오로직스 주가", ko: true },
+  hyundai:      { q: "현대차 005380 주가", ko: true },
+  kia:          { q: "기아 000270 주가", ko: true },
+  naver:        { q: "네이버 NAVER 주가", ko: true },
+  celltrion:    { q: "셀트리온 주가", ko: true },
+  posco:        { q: "POSCO홀딩스 주가", ko: true },
+  kakao:        { q: "카카오 Kakao 주가", ko: true },
   apple:        { q: "Apple AAPL stock" },
   microsoft:    { q: "Microsoft MSFT stock" },
   nvidia:       { q: "NVIDIA NVDA stock" },
@@ -103,9 +108,14 @@ const STATIC_ANALYSIS = {
   // 한국 빅테크
   samsung:      "메모리 사이클 회복과 HBM3E 양산 본격화로 +5% 상승. 다만 노조 협상 리스크와 월가 목표가 하향이 단기 부담.",
   sk_hynix:     "HBM 독점적 위치와 AI 수요 폭증으로 +12% 급등, 시총 1,000조 돌파. 외국인·기관 순매수 집중.",
-  naver:        "광고·커머스 둔화 우려와 AI 사업 가시화 지연으로 박스권 흐름. 두나무 합병 뉴스가 단기 모멘텀.",
-  kakao:        "광고 매출 회복 더디고 AI 차별화 부족으로 약세. 자회사 분리상장 이슈도 부담.",
   lg_energy:    "전기차 캐즘에서의 회복 기대와 ESS·북미 IRA 수혜로 박스권 상단 시도. 중국 BYD 경쟁 부담은 상존.",
+  samsung_bio:  "CDMO 글로벌 수주 확대와 5공장 가동 본격화로 실적 모멘텀. 바이오시밀러 매출 성장도 동반.",
+  hyundai:      "북미·인도 EV·하이브리드 판매 호조와 환율 우호로 분기 실적 호조. 관세 리스크가 단기 변수.",
+  kia:          "EV·SUV 라인업 강세와 미국 IRA 보조금 수혜로 마진 확대. 환율 효과 지속.",
+  naver:        "광고·커머스 둔화 우려와 AI 사업 가시화 지연으로 박스권 흐름. 두나무 합병 뉴스가 단기 모멘텀.",
+  celltrion:    "바이오시밀러 짐펜트라(美 직판) 실적 가속과 신약 파이프라인 진척으로 강세. 환율도 우호.",
+  posco:        "철강 업황 바닥 신호와 이차전지 소재(양극재·리튬) 사업 가치 재평가 기대.",
+  kakao:        "광고 매출 회복 더디고 AI 차별화 부족으로 약세. 자회사 분리상장 이슈도 부담.",
 
   // 미국 빅테크 (Magnificent 5)
   apple:        "iPhone 신모델 판매 호조와 서비스 부문 마진 확대로 신고가 권역. AI 통합(Apple Intelligence) 모멘텀.",

@@ -170,12 +170,21 @@ async function buildBitcoin() {
   }
 }
 
+// 한국 빅테크 풀 (시가총액 상위 10개) — render에서 변동률 |Δ| 큰 top 5만 표시.
+// 매 snapshot 빌드(KV 90분) 시 풀 전체 fetch → render가 동적 선정.
 const BIGTECH = [
-  { id: "samsung",   region: "KR_TECH", symbol: "005930.KS", label: "삼성전자",            unit: "원" },
-  { id: "sk_hynix",  region: "KR_TECH", symbol: "000660.KS", label: "SK하이닉스",          unit: "원" },
-  { id: "naver",     region: "KR_TECH", symbol: "035420.KS", label: "네이버",              unit: "원" },
-  { id: "kakao",     region: "KR_TECH", symbol: "035720.KS", label: "카카오",              unit: "원" },
-  { id: "lg_energy", region: "KR_TECH", symbol: "373220.KS", label: "LG에너지솔루션",      unit: "원" },
+  // KR_TECH 10 (시총 top)
+  { id: "samsung",     region: "KR_TECH", symbol: "005930.KS", label: "삼성전자",            unit: "원" },
+  { id: "sk_hynix",    region: "KR_TECH", symbol: "000660.KS", label: "SK하이닉스",          unit: "원" },
+  { id: "lg_energy",   region: "KR_TECH", symbol: "373220.KS", label: "LG에너지솔루션",      unit: "원" },
+  { id: "samsung_bio", region: "KR_TECH", symbol: "207940.KS", label: "삼성바이오로직스",     unit: "원" },
+  { id: "hyundai",     region: "KR_TECH", symbol: "005380.KS", label: "현대차",              unit: "원" },
+  { id: "kia",         region: "KR_TECH", symbol: "000270.KS", label: "기아",                unit: "원" },
+  { id: "naver",       region: "KR_TECH", symbol: "035420.KS", label: "네이버",              unit: "원" },
+  { id: "celltrion",   region: "KR_TECH", symbol: "068270.KS", label: "셀트리온",            unit: "원" },
+  { id: "posco",       region: "KR_TECH", symbol: "005490.KS", label: "POSCO홀딩스",         unit: "원" },
+  { id: "kakao",       region: "KR_TECH", symbol: "035720.KS", label: "카카오",              unit: "원" },
+  // US_TECH (Magnificent 5)
   { id: "apple",     region: "US_TECH", symbol: "AAPL",      label: "Apple",              unit: "$" },
   { id: "microsoft", region: "US_TECH", symbol: "MSFT",      label: "Microsoft",          unit: "$" },
   { id: "nvidia",    region: "US_TECH", symbol: "NVDA",      label: "NVIDIA",             unit: "$" },
@@ -224,7 +233,8 @@ export async function buildSnapshot(env) {
     "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
     "gold", "silver", "copper", "btc",
-    "samsung", "sk_hynix", "naver", "kakao", "lg_energy",
+    "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
+    "kia", "naver", "celltrion", "posco", "kakao",
     "apple", "microsoft", "nvidia", "google", "amazon",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });

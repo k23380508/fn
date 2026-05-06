@@ -26,7 +26,8 @@ Repo: https://github.com/k23380508/mp1
 | stats `changePct` (rangeBar 변화율 chip) | render.js rangeBar 안 chgChip 표시, .rng-chg.up/.down/.flat CSS, computeStats의 startValue/endValue 필드 의존 |
 | stats schema 변경 (snapshot.js `STATS_WINDOWS`/`computeStats`) | render.js statsBlock/rangeBar 표시, KV 캐시 무효화 또는 key bump 필요, /api/snapshot consumers, 카드 높이 변동 (그리드 레이아웃 영향) |
 | 새 region/카테고리 추가 (예: KR_TECH, CN, EU 등) | render.js regionBadge() switch + .badge.<class> CSS, snapshot.js BUILDERS+order, series.js SERIES_REGISTRY, render.js CHARTABLE_IDS, render.js 새 섹션 HTML+heroIds/equityIds/...Ids 변수, **새 통화면 fmtValue() 분기** (예: HK$, ¥, €), CLAUDE.md 카드 표 |
-| 빅테크 종목 추가/제거 (snapshot.js `BIGTECH` 배열) | series.js SERIES_REGISTRY 동기화, render.js {kr,us,cn}TechIds 배열, news.js 검색 query 동기화, render.js 빅테크 뉴스 newsSection 호출 동기화, KV cache key bump (snapshot/news 모두) |
+| 빅테크 종목 추가/제거 (snapshot.js `BIGTECH` 배열) | series.js SERIES_REGISTRY 동기화, render.js KR_TECH_POOL/usTechIds 배열, render.js CHARTABLE_IDS, reasons.js QUERIES + STATIC_ANALYSIS, render.js 빅테크 뉴스 newsSection 호출 동기화, KV cache key bump (snapshot/news 모두) |
+| 한국 빅테크 풀 변경 (KR_TECH_POOL) | snapshot.js BIGTECH의 KR_TECH region 종목과 1:1 일치 필요. render.js pickTopMovers(byId, pool, n)이 매 snapshot 갱신마다 \|Δ\| top 5 동적 선정 (KV 90분 만료 시 재선정). pool 카드 모두 fetch(빅테크 yahoo 1y) 되므로 너무 많아지면 subrequest 한도 영향 — 현재 KR 10 + US 5 = 15개, 안전 |
 | 뉴스 source 변경 (news.js URL/parse) | KV 캐시 (news:v2:latest, TTL 15분), render.js newsSection HTML/CSS, /api/news consumers, CLAUDE.md 출처 표 |
 | 뉴스 schema 변경 (kr/us/ai 추가/제거, 번역 토글) | render.js newsSection 호출 + grid columns(.news-grid 768+), KV cache key 버전 bump (news:v3:...) — 옛 cache 자동 무효화, /api/news consumers, CLAUDE.md |
 | Workers AI 번역 모델 변경 | wrangler.jsonc ai binding (변경 금지), news.js translateToKo() 모델명·prompt schema, 번역 실패 fallback 동작 (원문 표시) |

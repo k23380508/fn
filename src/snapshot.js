@@ -263,7 +263,7 @@ const BIGTECH = [
   { id: "amd",       region: "US_TECH", symbol: "AMD",   label: "AMD",                  unit: "$" },
   { id: "palantir",  region: "US_TECH", symbol: "PLTR",  label: "Palantir",             unit: "$" },
   // 미국 ETF (사용자 지정 5종)
-  { id: "arq_etf",  region: "US_ETF", symbol: "ARQ",  label: "ARQ",                       unit: "$" },
+  { id: "arq_etf",  region: "US_ETF", symbol: "ARKQ", label: "ARKQ (ARK 자율·로보틱스)",   unit: "$" },
   { id: "gld_etf",  region: "US_ETF", symbol: "GLD",  label: "GLD (SPDR Gold)",           unit: "$" },
   { id: "smrf_etf", region: "US_ETF", symbol: "SMRF", label: "SMRF",                      unit: "$" },
   { id: "xlc_etf",  region: "US_ETF", symbol: "XLC",  label: "XLC (Communication 섹터)",  unit: "$" },

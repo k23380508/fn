@@ -52,7 +52,7 @@ export const SERIES_REGISTRY = {
   jpmorgan:     { source: "yahoo", symbol: "JPM" },
   amd:          { source: "yahoo", symbol: "AMD" },
   palantir:     { source: "yahoo", symbol: "PLTR" },
-  arq_etf:      { source: "yahoo", symbol: "ARQ" },
+  arq_etf:      { source: "yahoo", symbol: "ARKQ" },
   gld_etf:      { source: "yahoo", symbol: "GLD" },
   smrf_etf:     { source: "yahoo", symbol: "SMRF" },
   xlc_etf:      { source: "yahoo", symbol: "XLC" },

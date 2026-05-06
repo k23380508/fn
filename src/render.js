@@ -50,6 +50,7 @@ function regionBadge(region) {
   if (region === "US") return `<span class="badge us">US</span>`;
   if (region === "KR_TECH") return `<span class="badge kr-tech">K-TECH</span>`;
   if (region === "US_TECH") return `<span class="badge us-tech">US-TECH</span>`;
+  if (region === "US_ETF") return `<span class="badge us-etf">US-ETF</span>`;
   if (region === "CN") return `<span class="badge cn">CN</span>`;
   if (region === "CMD") return `<span class="badge cmd">금속</span>`;
   if (region === "CRY") return `<span class="badge cry">CRYPTO</span>`;
@@ -67,6 +68,7 @@ const CHARTABLE_IDS = new Set([
   "apple", "microsoft", "nvidia", "google", "amazon",
   "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
   "amd", "palantir", "coinbase",
+  "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
 ]);
 
 // 한국 빅테크 시총 top 10 풀 → |Δ| 큰 3개
@@ -225,6 +227,8 @@ const ALWAYS_REASON_IDS = new Set([
   "apple", "microsoft", "nvidia", "google", "amazon",
   "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
   "amd", "palantir", "coinbase",
+  // 미국 ETF
+  "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
 ]);
 
 // 금리 카드용 history 표시 (직전 변경 2회 + 현재). 다른 카드는 빈 문자열.
@@ -394,6 +398,7 @@ export function renderHtml(snapshot, _news, calendar) {
   const usGain = pickMaxGain(byId, US_MOVERS_POOL);
   const usLoss = pickMaxLoss(byId, US_MOVERS_POOL);
   const usTechIds = [...new Set([...usTop3, usGain, usLoss].filter(Boolean))];
+  const usEtfIds = ["arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf"];
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
   const equityHtml = equityIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
@@ -403,6 +408,7 @@ export function renderHtml(snapshot, _news, calendar) {
   const assetHtml = assetIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const krTechHtml = krTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const usTechHtml = usTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
+  const usEtfHtml = usEtfIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
 
   return `<!doctype html>
 <html lang="ko">
@@ -460,6 +466,7 @@ export function renderHtml(snapshot, _news, calendar) {
   .badge.cry { background: rgba(249,115,22,0.15); color: var(--cry); }
   .badge.kr-tech { background: rgba(59,130,246,0.18); color: var(--kr); }
   .badge.us-tech { background: rgba(245,158,11,0.18); color: var(--us); }
+  .badge.us-etf { background: rgba(167,139,250,0.18); color: var(--fx); }
   .badge.cn { background: rgba(239,68,68,0.18); color: var(--down); }
   .value { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
   .card.hero .value { font-size: 30px; }
@@ -642,6 +649,9 @@ export function renderHtml(snapshot, _news, calendar) {
 
   <h2>미국 빅테크 (US Big Tech) <span class="h2-hint">시총 top 10 중 변동 큰 3개 + 시장 max상승 1 + max하락 1</span></h2>
   <div class="grid five">${usTechHtml}</div>
+
+  <h2>미국 ETF</h2>
+  <div class="grid five">${usEtfHtml}</div>
 
   <footer>
     <div>데이터 출처: 한국은행 ECOS · FRED (St. Louis Fed) · Yahoo Finance · CoinGecko · Google News</div>

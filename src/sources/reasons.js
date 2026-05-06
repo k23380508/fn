@@ -49,6 +49,11 @@ const QUERIES = {
   amd:          { q: "AMD Advanced Micro Devices stock" },
   palantir:     { q: "Palantir PLTR stock" },
   coinbase:     { q: "Coinbase COIN stock" },
+  arq_etf:      { q: "ARQ ETF stock" },
+  gld_etf:      { q: "GLD SPDR Gold ETF" },
+  smrf_etf:     { q: "SMRF ETF" },
+  xlc_etf:      { q: "XLC Communication Services Select Sector SPDR" },
+  xlu_etf:      { q: "XLU Utilities Select Sector SPDR" },
   tencent:      { q: "Tencent 0700 HK stock" },
   alibaba:      { q: "Alibaba BABA stock" },
   baidu:        { q: "Baidu stock" },
@@ -149,6 +154,11 @@ const STATIC_ANALYSIS = {
   amd:          "AI GPU(MI300) 수주와 서버 CPU 점유율 변동에 따라 큰 폭 등락. Nvidia 대비 밸류에이션 매력.",
   palantir:     "정부·국방 계약 확장 + AIP 상업 매출 가속으로 변동성 큼. 밸류에이션 부담은 항상 변수.",
   coinbase:     "BTC·ETH 가격과 거래량에 직접 연동 → 암호화폐 변동성 그대로 반영. 수수료 마진이 핵심.",
+  arq_etf:      "ARQ ticker 검증 필요 — 일반적 ETF 아닐 수 있음. 데이터 fetch 결과 확인 후 보정.",
+  gld_etf:      "금 현물 가격 추종 ETF (SPDR Gold Shares). 인플레·달러 약세·금리 인하 시 상승, 안전자산 수요 직접 반영.",
+  smrf_etf:     "SMRF ticker 검증 필요 — 일반적 ETF 아닐 수 있음. 데이터 fetch 결과 확인 후 보정.",
+  xlc_etf:      "통신서비스 섹터 SPDR — Meta·Alphabet·Netflix·Disney 비중 큼. 빅테크 광고 매출과 동행, NDX 흐름 추종.",
+  xlu_etf:      "유틸리티 섹터 SPDR — 금리 인하 기대 시 방어주 수급 유입. AI 데이터센터 전력 수요로 장기 호재.",
 
 };
 

@@ -242,6 +242,12 @@ const BIGTECH = [
   { id: "amd",       region: "US_TECH", symbol: "AMD",   label: "AMD",                  unit: "$" },
   { id: "palantir",  region: "US_TECH", symbol: "PLTR",  label: "Palantir",             unit: "$" },
   { id: "coinbase",  region: "US_TECH", symbol: "COIN",  label: "Coinbase",             unit: "$" },
+  // 미국 ETF (사용자 지정 5종)
+  { id: "arq_etf",  region: "US_ETF", symbol: "ARQ",  label: "ARQ",                       unit: "$" },
+  { id: "gld_etf",  region: "US_ETF", symbol: "GLD",  label: "GLD (SPDR Gold)",           unit: "$" },
+  { id: "smrf_etf", region: "US_ETF", symbol: "SMRF", label: "SMRF",                      unit: "$" },
+  { id: "xlc_etf",  region: "US_ETF", symbol: "XLC",  label: "XLC (Communication 섹터)",  unit: "$" },
+  { id: "xlu_etf",  region: "US_ETF", symbol: "XLU",  label: "XLU (Utilities 섹터)",      unit: "$" },
 ];
 
 function makeBigtechBuilder(t) {
@@ -291,6 +297,7 @@ export async function buildSnapshot(env) {
     "apple", "microsoft", "nvidia", "google", "amazon",
     "meta", "tesla", "broadcom", "berkshire", "jpmorgan",
     "amd", "palantir", "coinbase",
+    "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
   ];
   const items = order.map((id) => byId[id] || { id, error: "missing" });
   await enrichWithStats(items, env);

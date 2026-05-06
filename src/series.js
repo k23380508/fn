@@ -55,6 +55,11 @@ export const SERIES_REGISTRY = {
   amd:          { source: "yahoo", symbol: "AMD" },
   palantir:     { source: "yahoo", symbol: "PLTR" },
   coinbase:     { source: "yahoo", symbol: "COIN" },
+  arq_etf:      { source: "yahoo", symbol: "ARQ" },
+  gld_etf:      { source: "yahoo", symbol: "GLD" },
+  smrf_etf:     { source: "yahoo", symbol: "SMRF" },
+  xlc_etf:      { source: "yahoo", symbol: "XLC" },
+  xlu_etf:      { source: "yahoo", symbol: "XLU" },
 };
 
 function computeYoy(ascSeries) {

@@ -78,13 +78,25 @@ function rateHistory(obs, n = 3) {
 async function buildKrBaseRate(env) {
   const obs = await fetchEcos("722Y001", "0101000", "M", env, { count: 24 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_base_rate", region: "KR", label: "한국 기준금리", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  const out = { id: "kr_base_rate", region: "KR", label: "한국 기준금리", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  // ECOS yyyymm → ISO 변환 + asc 정렬 (computeStats는 startValue=window 첫 값 = 가장 오래된)
+  const ascSeries = obs.map((o) => ({
+    date: /^\d{6}$/.test(o.date) ? `${o.date.slice(0,4)}-${o.date.slice(4,6)}-01` : o.date,
+    value: o.value,
+  })).slice().reverse();
+  const stats = computeStats(ascSeries);
+  if (stats) out.stats = stats;
+  return out;
 }
 
 async function buildUsFedFunds(env) {
   const obs = await fetchFred("DFF", env, { limit: 200 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_fed_funds", region: "US", label: "美 연준 기준금리 (DFF)", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  const out = { id: "us_fed_funds", region: "US", label: "美 연준 기준금리 (DFF)", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  const ascSeries = obs.map((o) => ({ date: o.date, value: o.value })).slice().reverse();
+  const stats = computeStats(ascSeries);
+  if (stats) out.stats = stats;
+  return out;
 }
 
 async function buildKrCpiYoy(env) {
@@ -98,15 +110,28 @@ async function buildUsCpiYoy(env) {
 }
 
 async function buildKr10y(env) {
-  const obs = await fetchEcos("817Y002", "010230000", "D", env, { count: 30 });
+  // 1Y daily for stats (yyyymmdd date) — stats 직접 채워서 enrichWithStats skip
+  const obs = await fetchEcos("817Y002", "010230000", "D", env, { count: 365 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  const out = { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  // ECOS yyyymmdd → ISO + asc (오래된 → 최신)
+  const ascSeries = obs.map((o) => ({
+    date: /^\d{8}$/.test(o.date) ? `${o.date.slice(0,4)}-${o.date.slice(4,6)}-${o.date.slice(6,8)}` : o.date,
+    value: o.value,
+  })).slice().reverse();
+  const stats = computeStats(ascSeries);
+  if (stats) out.stats = stats;
+  return out;
 }
 
 async function buildUs10y(env) {
-  const obs = await fetchFred("DGS10", env, { limit: 30 });
+  const obs = await fetchFred("DGS10", env, { limit: 365 });
   const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_10y", region: "US", label: "美 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  const out = { id: "us_10y", region: "US", label: "美 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
+  const ascSeries = obs.map((o) => ({ date: o.date, value: o.value })).slice().reverse();
+  const stats = computeStats(ascSeries);
+  if (stats) out.stats = stats;
+  return out;
 }
 
 async function buildKrUnemp(env) {

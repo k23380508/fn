@@ -157,11 +157,14 @@ function statsBlock(item) {
   if (!item?.stats || !Number.isFinite(item.value)) return "";
   const order = ["1M", "3M", "6M", "1Y"];
   const rows = order
-    .filter((k) => item.stats[k] && Number.isFinite(item.stats[k].hi) && Number.isFinite(item.stats[k].lo) && item.stats[k].hi !== item.stats[k].lo)
+    .filter((k) => item.stats[k] && Number.isFinite(item.stats[k].hi) && Number.isFinite(item.stats[k].lo))
     .map((k) => {
       const s = item.stats[k];
-      const pos = Math.max(0, Math.min(100, ((item.value - s.lo) / (s.hi - s.lo)) * 100));
-      return { key: k, stats: s, pos };
+      // hi===lo (동결) 케이스: 마커 중앙(50%)에 표시 + 변동 표시는 별도 처리
+      const pos = (s.hi === s.lo)
+        ? 50
+        : Math.max(0, Math.min(100, ((item.value - s.lo) / (s.hi - s.lo)) * 100));
+      return { key: k, stats: s, pos, flat: s.hi === s.lo };
     });
   if (!rows.length) return "";
   // Identify extremes for badge tagging
@@ -170,6 +173,7 @@ function statsBlock(item) {
   const NEAR_HIGH = 92;
   const NEAR_LOW = 8;
   function badgeFor(r) {
+    if (r.flat) return { cls: " flat", tag: ' <span class="rng-tag flat">동결</span>' };
     if (r.pos >= NEAR_HIGH) return { cls: " near-high", tag: ' <span class="rng-tag high">🔥 신고가권</span>' };
     if (r.pos <= NEAR_LOW) return { cls: " near-low", tag: ' <span class="rng-tag low">🔥 신저가권</span>' };
     if (rows.length > 1 && r.pos === maxPos && r.pos > 70) return { cls: " soft-high", tag: ' <span class="rng-tag high soft">최고권</span>' };
@@ -512,6 +516,9 @@ export function renderHtml(snapshot, _news, calendar) {
   .rng-tag.high { background: rgba(34,197,94,0.25); color: var(--up); }
   .rng-tag.low { background: rgba(239,68,68,0.25); color: var(--down); }
   .rng-tag.soft { opacity: 0.6; font-weight: 700; }
+  .rng-tag.flat { background: rgba(138,147,166,0.20); color: var(--muted); }
+  .rng.flat { background: rgba(138,147,166,0.05); }
+  .rng.flat .rng-marker { background: var(--muted); box-shadow: 0 0 0 1px var(--muted); }
   @keyframes rng-pulse-high {
     0%, 100% { background: rgba(34,197,94,0.04); box-shadow: inset 0 0 0 1px rgba(34,197,94,0.20); }
     50%      { background: rgba(34,197,94,0.18); box-shadow: inset 0 0 0 1px rgba(34,197,94,0.70); }

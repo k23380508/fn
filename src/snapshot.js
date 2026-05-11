@@ -202,10 +202,8 @@ async function buildSp500(env) {
   return { id: "sp500", region: "US", label: "S&P 500", unit: "", value: latest, prev, delta: deltaPair(latest, prev), date };
 }
 
-async function buildUsdKrw(env) {
-  const obs = await fetchFred("DEXKOUS", env, { limit: 5 });
-  const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "usd_krw", region: "FX", label: "USD/KRW", unit: "원", value: latest, prev, delta: deltaPair(latest, prev), date };
+async function buildUsdKrw() {
+  return buildYahooCard({ id: "usd_krw", region: "FX", label: "USD/KRW", unit: "원", symbol: "KRW=X" });
 }
 
 async function buildGold() {

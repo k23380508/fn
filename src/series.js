@@ -9,7 +9,7 @@ const RANGE_TO_YAHOO = { "1M": "1mo", "3M": "3mo", "6M": "6mo", "1Y": "1y", "5Y"
 export const RANGES = Object.keys(RANGE_DAYS);
 
 export const SERIES_REGISTRY = {
-  usd_krw:      { source: "fred", id: "DEXKOUS", freq: "D" },
+  usd_krw:      { source: "yahoo", symbol: "KRW=X" },
   kospi:        { source: "yahoo", symbol: "^KS11" },
   kosdaq:       { source: "yahoo", symbol: "^KQ11" },
   sp500:        { source: "fred", id: "SP500", freq: "D" },

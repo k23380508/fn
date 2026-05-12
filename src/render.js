@@ -215,6 +215,7 @@ function card(item, hero = false) {
 
 // Cards always given a reason regardless of alert threshold (사용자 관심 high)
 const ALWAYS_REASON_IDS = new Set([
+  "usd_krw",
   "gold", "silver", "copper", "btc",
   "kospi", "kosdaq", "sp500", "nasdaq",
   "kr_cpi_yoy", "us_cpi_yoy",

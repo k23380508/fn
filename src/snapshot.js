@@ -186,9 +186,9 @@ async function buildUsUnemp(env) {
 // M2 통화량: 표시 단위 "조원"/"조$". FRED M2SL은 십억$ 단위, ECOS 101Y004 BBHA00은
 // 십억원 단위 — 둘 다 /1000 스케일링해 조원/조$ (10^12) 표시. 16개월 fetch로 stats 채움.
 async function buildKrM2(env) {
-  // FRED MYAGM2KRM189S는 2017년 5월에서 중단 → ECOS 직접 호출
-  // 101Y004 BBHA00 = M2(평잔, 원계열), 단위 십억원
-  const obs = await fetchEcos("101Y004", "BBHA00", "M", env, { count: 16 });
+  // FRED MYAGM2KRM189S는 2017년 5월에서 중단 → ECOS 신지표 직접 호출
+  // 161Y005 BBHS00 = M2(평잔, 계절조정계열), 단위 십억원, 신지표 (101Y004는 구지표로 2004년 종료)
+  const obs = await fetchEcos("161Y005", "BBHS00", "M", env, { count: 16 });
   const scaled = obs.map((o) => ({ date: o.date, value: Number.isFinite(o.value) ? o.value / 1000 : o.value }));
   const { latest, prev, date } = pickLatestPrev(scaled);
   const out = { id: "kr_m2", region: "KR", label: "한국 M2 (광의통화)", unit: "조원", value: latest, prev, delta: deltaPair(latest, prev), date };

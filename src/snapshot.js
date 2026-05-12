@@ -191,7 +191,7 @@ async function buildKrM2(env) {
   const obs = await fetchEcos("161Y005", "BBHS00", "M", env, { count: 16 });
   const scaled = obs.map((o) => ({ date: o.date, value: Number.isFinite(o.value) ? o.value / 1000 : o.value }));
   const { latest, prev, date } = pickLatestPrev(scaled);
-  const out = { id: "kr_m2", region: "KR", label: "한국 M2 (광의통화)", unit: "조원", value: latest, prev, delta: deltaPair(latest, prev), date };
+  const out = { id: "kr_m2", region: "KR", label: "한국 M2 (광의통화)", unit: "조원", value: latest, prev, delta: deltaPair(latest, prev), date, history: scaled.slice(0, 5) };
   // ECOS yyyymm → ISO 변환 + asc 정렬 (stats용)
   const ascSeries = scaled.map((o) => ({
     date: /^\d{6}$/.test(o.date) ? `${o.date.slice(0,4)}-${o.date.slice(4,6)}-01` : o.date,
@@ -206,7 +206,7 @@ async function buildUsM2(env) {
   const obs = await fetchFred("M2SL", env, { limit: 16 });
   const scaled = obs.map((o) => ({ date: o.date, value: Number.isFinite(o.value) ? o.value / 1000 : o.value }));
   const { latest, prev, date } = pickLatestPrev(scaled);
-  const out = { id: "us_m2", region: "US", label: "美 M2 (광의통화)", unit: "조$", value: latest, prev, delta: deltaPair(latest, prev), date };
+  const out = { id: "us_m2", region: "US", label: "美 M2 (광의통화)", unit: "조$", value: latest, prev, delta: deltaPair(latest, prev), date, history: scaled.slice(0, 5) };
   const stats = computeStats(scaled.slice().reverse());
   if (stats) out.stats = stats;
   return out;

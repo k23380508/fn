@@ -235,19 +235,28 @@ const ALWAYS_REASON_IDS = new Set([
   "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
 ]);
 
-// 금리·CPI 카드용 history 표시 (현재/직전/그 이전 3개월/3변경분). 다른 카드는 빈 문자열.
-const RATE_HISTORY_IDS = new Set(["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y", "kr_cpi_yoy", "us_cpi_yoy"]);
+// 금리·CPI·M2 카드용 history 표시. history 배열 길이 ≤3이면 "현재/직전/그 이전",
+// 그보다 길면(M2 5개) "현재/1개월 전/2개월 전/..." 라벨로 자동 전환. 다른 카드는 빈 문자열.
+const RATE_HISTORY_IDS = new Set(["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y", "kr_cpi_yoy", "us_cpi_yoy", "kr_m2", "us_m2"]);
+
+function historyLabel(i, total) {
+  if (i === 0) return "현재";
+  if (total <= 3) return i === 1 ? "직전" : "그 이전";
+  return `${i}개월 전`;
+}
 
 function rateHistoryBlock(item) {
   if (!RATE_HISTORY_IDS.has(item?.id)) return "";
   const h = item?.history;
   if (!Array.isArray(h) || h.length === 0) return "";
-  const rows = h.slice(0, 3).map((p, i) => {
+  const rows = h.slice(0, 12);
+  const total = rows.length;
+  const rowsHtml = rows.map((p, i) => {
     const cls = i === 0 ? "now" : "";
-    const label = i === 0 ? "현재" : i === 1 ? "직전" : "그 이전";
+    const label = historyLabel(i, total);
     return `<div class="rate-row ${cls}"><span class="rate-label">${escape(label)}</span><span class="rate-date">${escape(p.date || "")}</span><span class="rate-value">${escape(fmtValue(p.value, item.unit))}</span></div>`;
   }).join("");
-  return `<div class="rate-history">${rows}</div>`;
+  return `<div class="rate-history">${rowsHtml}</div>`;
 }
 
 function reasonBlock(item) {

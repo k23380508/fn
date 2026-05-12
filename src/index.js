@@ -32,7 +32,7 @@ function withSecurity(headers = {}) {
 const SNAPSHOT_KEY = "snapshot:latest";
 const SNAPSHOT_TTL = 5400; // 90 minutes
 const SERIES_TTL = 3600;   // 1 hour
-const REASON_TTL = 86400;  // 24 hours per id (static analysis stable for the day)
+const REASON_TTL = 1800;   // 30 minutes per id (LLM analysis aligned with visit cadence)
 const CALENDAR_KEY = "calendar:v4:thisweek";
 const CALENDAR_TTL = 3600; // 1 hour
 
@@ -140,18 +140,24 @@ async function handleRequest(request, env) {
         const missing = [];
         for (const id of ids) {
           if (!force) {
-            const cached = await getCached(`reason:v4:${id}`, env);
+            const cached = await getCached(`reason:v5:${id}`, env);
             if (cached?.headline) { out[id] = cached; continue; }
           }
           missing.push(id);
         }
         if (missing.length) {
-          const inputs = missing.map((id) => ({ id }));
+          // LLM analysis needs item (label/value/delta) — load snapshot once and pass per id.
+          const { snapshot } = await getOrBuildSnapshot(env, { force: false });
+          const itemsById = {};
+          for (const it of snapshot?.items || []) {
+            if (it?.id) itemsById[it.id] = it;
+          }
+          const inputs = missing.map((id) => ({ id, item: itemsById[id] || null }));
           const built = await buildReasonsFor(inputs, env);
           for (const id of missing) {
             if (built[id]) {
               out[id] = built[id];
-              await putCached(`reason:v4:${id}`, built[id], env, REASON_TTL);
+              await putCached(`reason:v5:${id}`, built[id], env, REASON_TTL);
             }
           }
         }

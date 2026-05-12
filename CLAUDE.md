@@ -18,7 +18,7 @@ Repo: https://github.com/k23380508/mp1
 | Alert 임계값 변경 (render.js `ALERT_PCT`) | 동시에 모든 카드 색상/pulse 영향, 사용자 인지 균형 (너무 낮으면 노이즈, 너무 높으면 무의미). 카드별 차등 필요시 alertClass()를 region/id 기반으로 분기 |
 | Range bar 강조 임계값 변경 (statsBlock `NEAR_HIGH`/`NEAR_LOW`) | rng-pulse-high/low CSS 임계 일치, soft-high/low 보조 임계, 카드 시각적 노이즈 ↔ 인지력 균형 |
 | Range bar 레이아웃 변경 (rng-head/rng-body 두 줄 구조) | rangeBar() HTML 구조, .rng/.rng-head/.rng-body CSS, .rng-track 1fr 보장 (라벨/태그 길이 무관 일정 비율 유지) |
-| Reason 추가/변경 (sources/reasons.js QUERIES, /api/reasons) | render.js reasonBlock 임계 (현재 ALERT_PCT 3%) + `ALWAYS_REASON_IDS` 핀 셋(현재 41개: 거시 13 + KR 빅테크 15 + US 빅테크 13), 클라 JS loadReasons cap (현재 30), 서버 /api/reasons cap (현재 30), KV key `reason:v4:<id>` (TTL 30분) — schema 변경 시 v5 bump, fetchOne은 RSS 실패해도 STATIC_ANALYSIS 있으면 항상 반환 (link/source는 best-effort), .reason-link/.analysis CSS, CLAUDE.md 출처 표 |
+| Reason 추가/변경 (sources/reasons.js QUERIES, /api/reasons) | render.js reasonBlock 임계 (현재 ALERT_PCT 3%) + `ALWAYS_REASON_IDS` 핀 셋(현재 41개: 거시 13 + KR 빅테크 15 + US 빅테크 13), 클라 JS loadReasons cap (현재 30), 서버 /api/reasons cap (현재 30), KV key `reason:v5:<id>` (TTL 30분, Workers AI 분석 기반) — schema 변경 시 v6 bump, fetchOne 우선순위: ① LLM 분석(Workers AI Llama 3.1 8B + 헤드라인 5건 + item.label·delta·value) → ② STATIC_ANALYSIS (LLM 실패·한도 소진 시 안전망) → ③ RSS top headline, /api/reasons에서 snapshot KV 조회 후 item 데이터 전달 (LLM 컨텍스트용), .reason-link/.analysis CSS, CLAUDE.md 출처 표 |
 | Reason 분석 LLM 변경 (reasons.js generateAnalysis) | 모델 (현재 `@cf/meta/llama-3.1-8b-instruct`), prompt 구조, max_tokens, temperature, /api/reasons에서 snapshot KV 조회 후 item.label·delta 전달 (item 없으면 fallback to top headline + m2m100 번역), .reason-link.analysis 노란 강조 CSS, AI 뱃지 |
 | 경제지표 캘린더 source 변경 (sources/calendar.js URL/필터) | KV cache key `calendar:v1:thisweek` (TTL 1h), /api/calendar consumers, render.js calendarSection 표시(국가 flag 매핑 CAL_COUNTRY_FLAG, IMPORTANT_COUNTRIES 필터 USD/KRW만, High/Medium impact), CLAUDE.md 출처 표 |
 | 시장 영향 멘트 변경 (calendar.js IMPACT_NOTES 배열) | title 패턴 매칭 순서가 중요 (ADP→NFP 같은 충돌은 specific 먼저), .cal-mkt CSS, KR_STATIC_THIS_WEEK 보강용 정적 KR 발표 매핑 (매주 수동 갱신), 갱신 시 CALENDAR_KEY v2 bump 또는 fresh=1 호출 필요 |
@@ -93,14 +93,14 @@ src/
     ├── fred.js     FRED (St. Louis Fed)
     ├── yahoo.js    Yahoo Finance v8 chart (single quote + series)
     ├── coingecko.js CoinGecko (BTC fallback)
-    ├── reasons.js  STATIC_ANALYSIS 매핑 (외부 AI 없음, 직접 작성한 한 줄 변동 원인)
+    ├── reasons.js  generateAnalysis (Workers AI Llama 3.1 8B) + STATIC_ANALYSIS fallback + RSS 헤드라인 3순위 fallback
     └── calendar.js Forex Factory 경제지표 일정 JSON (어제·오늘·내일, USD/KRW)
 ```
 
 ## 바인딩 / 환경
 
 - KV: `MACRO_CACHE` (id `4b024d35834f4d85b912e903fc785e36`) — wrangler.jsonc, 변경 금지
-- AI: 외부 AI 호출 없음. reason 분석은 `src/sources/reasons.js`의 `STATIC_ANALYSIS` 매핑 (개발자가 직접 작성, 갱신 시 KV key v3→v4 bump)
+- AI: `env.AI` 바인딩 활성화. `@cf/meta/llama-3.1-8b-instruct` (Workers AI)로 카드별 변동 원인 한국어 한 줄 분석 자동 생성. Free 한도 10,000 Neurons/day (카드 30개 × ~15 Neurons = ~450/refresh, 5 visits/day 가정 ~2,250 = 22%). 한도 소진·LLM 실패 시 `STATIC_ANALYSIS` 매핑(수기 작성)으로 자동 fallback. schema 변경 시 KV key v5→v6 bump
 - 보안 헤더: index.js `SECURITY_HEADERS` 상수가 모든 응답에 적용 (CSP/HSTS/X-Frame/X-Content-Type/Referrer/Permissions). CSP가 `script-src 'self' 'unsafe-inline'`라 외부 script 추가하려면 CSP 완화 필요. 외부 link href는 `safeLink()`/`safeUrl()`로 http(s)만 허용 (XSS 방어).
 - Secrets: ECOS API key, FRED API key (각 source에서 `env.*`로 참조 — `wrangler secret put`로 관리)
 - compatibility_date: 2026-05-02
@@ -118,6 +118,6 @@ npx wrangler tail mp1   # 라이브 로그
 ## 데이터 출처 / 정책
 
 - 한국은행 ECOS · FRED · Yahoo Finance · CoinGecko · Google News (RSS) · Forex Factory thisweek JSON (경제지표 캘린더)
-- 외부 AI 호출 없음 (reason 분석은 정적 데이터, 영문 뉴스는 원문 그대로, 캘린더 이벤트 제목도 원문 영문)
+- Cloudflare Workers AI (Llama 3.1 8B) 사용 — reason 분석은 카드 데이터 + 뉴스 헤드라인 종합해 LLM 한 줄 생성 (실패·한도 시 STATIC_ANALYSIS fallback). 영문 뉴스는 원문 그대로, 캘린더 이벤트 제목도 원문 영문
 - 추측 금지 — 출처에서 받은 값만 표시, fallback 없으면 "—"
 - 페이지 하단 출처 표기 유지

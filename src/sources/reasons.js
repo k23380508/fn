@@ -162,15 +162,51 @@ const STATIC_ANALYSIS = {
 
 };
 
+// LLM 기반 변동 원인 분석. 최신 뉴스 5개 + 카드 데이터(label/delta) 종합해
+// 한국어 한 문장. Workers AI Llama 3.1 8B Instruct 사용.
+async function generateAnalysis(item, headlines, env) {
+  if (!env?.AI || !item || !headlines?.length) return null;
+  const pct = item?.delta?.pct;
+  const pctStr = Number.isFinite(pct) ? `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%` : "최근 변동";
+  const valueStr = Number.isFinite(item?.value) ? `${item.value}` : "";
+  const headlinesText = headlines.slice(0, 5).map((h, i) => `${i+1}. ${h.title}`).join("\n");
+  const userPrompt = `종목/지표: ${item.label || item.id}
+현재 값: ${valueStr}${item.unit || ""}
+최근 변동: ${pctStr}
+
+관련 최신 뉴스 헤드라인:
+${headlinesText}
+
+위 뉴스들을 종합해 ${item.label || item.id}이(가) ${pctStr} 움직인 핵심 원인을 한국어 한 문장(80자 이내)으로 설명하세요. 단순 헤드라인 인용이 아니라 인과관계로 풀어 주세요. 설명만 한 문장으로 답하고 다른 텍스트는 추가하지 마세요.`;
+  try {
+    const res = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+      messages: [
+        { role: "system", content: "당신은 한국 금융 시장 분석가입니다. 자산·지표 변동 원인을 한국어 한 문장으로 압축 설명합니다. 출력은 항상 한국어로, 단순 뉴스 제목 인용은 금지합니다." },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 160,
+      temperature: 0.3,
+    });
+    let text = res?.response;
+    if (typeof text !== "string") return null;
+    text = text.trim().split(/[\n\r]+/).map((s) => s.trim()).filter(Boolean)[0] || "";
+    text = text.replace(/^["“”'`]+|["“”'`]+$/g, "").replace(/^[-•·]\s*/, "").trim();
+    if (!text || text.length < 8) return null;
+    if (text.length > 140) text = text.slice(0, 140) + "…";
+    return text;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchOne(input, env) {
   const id = typeof input === "string" ? input : input.id;
+  const item = typeof input === "object" ? input.item : null;
   const def = QUERIES[id];
   if (!def) return null;
 
-  const analysis = STATIC_ANALYSIS[id] || null;
-  let top = null;
-
-  // Best-effort RSS fetch for link/source — failure does NOT block static analysis.
+  // Fetch up to 5 RSS headlines for LLM context + link/source
+  const heads = [];
   try {
     const res = await fetch(reasonUrl(def.q, def.ko), {
       cf: { cacheTtl: 600, cacheEverything: true },
@@ -178,31 +214,49 @@ async function fetchOne(input, env) {
     });
     if (res.ok) {
       const xml = await res.text();
-      const m = /<item>([\s\S]*?)<\/item>/.exec(xml);
-      if (m) {
+      const itemRe = /<item>([\s\S]*?)<\/item>/g;
+      let m;
+      while ((m = itemRe.exec(xml)) !== null && heads.length < 5) {
         const block = m[1];
-        top = {
+        heads.push({
           title: unwrapCdata(extract(block, "title")),
           link: unwrapCdata(extract(block, "link")),
           source: unwrapCdata(extract(block, "source")),
-        };
+        });
       }
     }
   } catch {
-    // ignore — static analysis fallback below
+    // ignore — fallback chain below
+  }
+  const top = heads[0] || null;
+
+  // 1순위: LLM 분석 (Workers AI + 헤드라인 + 카드 데이터)
+  if (item && heads.length) {
+    const llm = await generateAnalysis(item, heads, env);
+    if (llm) {
+      return {
+        headline: llm,
+        link: top?.link || "",
+        source: top?.source || "",
+        analysis: true,
+        translated: false,
+      };
+    }
   }
 
-  // Static analysis 있으면 link/source 없어도 항상 반환
-  if (analysis) {
+  // 2순위: 정적 STATIC_ANALYSIS (수기 작성, LLM 실패/한도 소진 시 안전망)
+  const staticText = STATIC_ANALYSIS[id] || null;
+  if (staticText) {
     return {
-      headline: analysis,
+      headline: staticText,
       link: top?.link || "",
       source: top?.source || "",
       analysis: true,
       translated: false,
     };
   }
-  // Static 없으면 RSS top headline fallback
+
+  // 3순위: RSS top headline (LLM·static 둘 다 없을 때)
   if (top?.title) {
     return {
       headline: top.title,

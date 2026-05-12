@@ -80,6 +80,21 @@ function rateHistory(obs, n = 3) {
   return out;
 }
 
+// CPI YoY 카드용 이력: 최신 n개월의 YoY 값 (dedup 없음 — 매월이 별도 데이터).
+// obs는 monthly desc, obs[i].value=원지수. obs[i] vs obs[i+12]로 YoY 계산.
+// n=3이면 obs[14]까지 필요 (16개 fetch면 안전).
+function cpiHistory(obs, n = 3) {
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const cur = obs[i];
+    const yearAgo = obs[i + 12];
+    if (!cur || !yearAgo || !yearAgo.value) continue;
+    const yoy = ((cur.value - yearAgo.value) / yearAgo.value) * 100;
+    out.push({ date: cur.date, value: yoy });
+  }
+  return out;
+}
+
 async function buildKrBaseRate(env) {
   const obs = await fetchEcos("722Y001", "0101000", "M", env, { count: 24 });
   const { latest, prev, date } = pickLatestPrev(obs);
@@ -122,13 +137,13 @@ async function buildKrCpiYoy(env) {
   // YoY 계산용 16개월치 한 번에 fetch (이전엔 fetchEcosYoY + fetchEcos 2회 호출)
   const obs = await fetchEcos("901Y009", "0", "M", env, { count: 16 });
   const yoy = computeYoYFromObs(obs);
-  return { id: "kr_cpi_yoy", region: "KR", label: "한국 CPI (전년동월비)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date };
+  return { id: "kr_cpi_yoy", region: "KR", label: "한국 CPI (전년동월비)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date, history: cpiHistory(obs, 3) };
 }
 
 async function buildUsCpiYoy(env) {
   const obs = await fetchFred("CPIAUCSL", env, { limit: 16 });
   const yoy = computeYoYFromObs(obs);
-  return { id: "us_cpi_yoy", region: "US", label: "美 CPI (YoY)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date };
+  return { id: "us_cpi_yoy", region: "US", label: "美 CPI (YoY)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date, history: cpiHistory(obs, 3) };
 }
 
 async function buildKr10y(env) {

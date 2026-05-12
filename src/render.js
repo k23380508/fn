@@ -231,8 +231,8 @@ const ALWAYS_REASON_IDS = new Set([
   "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
 ]);
 
-// 금리 카드용 history 표시 (직전 변경 2회 + 현재). 다른 카드는 빈 문자열.
-const RATE_HISTORY_IDS = new Set(["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"]);
+// 금리·CPI 카드용 history 표시 (현재/직전/그 이전 3개월/3변경분). 다른 카드는 빈 문자열.
+const RATE_HISTORY_IDS = new Set(["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y", "kr_cpi_yoy", "us_cpi_yoy"]);
 
 function rateHistoryBlock(item) {
   if (!RATE_HISTORY_IDS.has(item?.id)) return "";

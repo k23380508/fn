@@ -99,7 +99,7 @@ const STATIC_ANALYSIS = {
   vix:          "지정학적 리스크가 잠시 완화되며 risk-on 회복. VIX 16~18 레벨로 시장 불안 심리 진정.",
 
   // FX
-  usd_krw:      "한미 금리차 축소 기대와 외국인 코스피 순매수로 원화 강세 압력. 1,470원대에서 안정.",
+  // usd_krw: STATIC_ANALYSIS 의도적 미작성 — RSS top headline (Investing.com 한국어 등) 자동 fallback 사용 (환율은 일/주 단위로 변동 폭이 커서 정적 텍스트가 빨리 노후화)
 
   // 금리
   kr_base_rate: "한은이 물가 하향 안정 가시화로 2.50% 동결 유지. 연내 추가 인하 가능성 시장 반영 중.",

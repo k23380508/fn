@@ -183,14 +183,21 @@ async function buildUsUnemp(env) {
   return { id: "us_unemp", region: "US", label: "美 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
 }
 
-// FRED M2 series: 단위가 "Billions of National Currency"라 KR/US 모두 /1000으로
-// 스케일링해 표시 단위 "조원"/"조$"에 맞춤. 12개월치 fetch로 stats(range bar) 채움.
+// M2 통화량: 표시 단위 "조원"/"조$". FRED M2SL은 십억$ 단위, ECOS 101Y004 BBHA00은
+// 십억원 단위 — 둘 다 /1000 스케일링해 조원/조$ (10^12) 표시. 16개월 fetch로 stats 채움.
 async function buildKrM2(env) {
-  const obs = await fetchFred("MYAGM2KRM189S", env, { limit: 16 });
+  // FRED MYAGM2KRM189S는 2017년 5월에서 중단 → ECOS 직접 호출
+  // 101Y004 BBHA00 = M2(평잔, 원계열), 단위 십억원
+  const obs = await fetchEcos("101Y004", "BBHA00", "M", env, { count: 16 });
   const scaled = obs.map((o) => ({ date: o.date, value: Number.isFinite(o.value) ? o.value / 1000 : o.value }));
   const { latest, prev, date } = pickLatestPrev(scaled);
   const out = { id: "kr_m2", region: "KR", label: "한국 M2 (광의통화)", unit: "조원", value: latest, prev, delta: deltaPair(latest, prev), date };
-  const stats = computeStats(scaled.slice().reverse());
+  // ECOS yyyymm → ISO 변환 + asc 정렬 (stats용)
+  const ascSeries = scaled.map((o) => ({
+    date: /^\d{6}$/.test(o.date) ? `${o.date.slice(0,4)}-${o.date.slice(4,6)}-01` : o.date,
+    value: o.value,
+  })).slice().reverse();
+  const stats = computeStats(ascSeries);
   if (stats) out.stats = stats;
   return out;
 }

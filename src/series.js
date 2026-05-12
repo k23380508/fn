@@ -23,7 +23,7 @@ export const SERIES_REGISTRY = {
   us_cpi_yoy:   { source: "fred", id: "CPIAUCSL", freq: "M", computeYoy: true },
   kr_unemp:     { source: "fred", id: "LRHUTTTTKRM156S", freq: "M" },
   us_unemp:     { source: "fred", id: "UNRATE", freq: "M" },
-  kr_m2:        { source: "fred", id: "MYAGM2KRM189S", freq: "M", scale: 0.001 },
+  kr_m2:        { source: "ecos", table: "101Y004", item: "BBHA00", freq: "M", scale: 0.001 },
   us_m2:        { source: "fred", id: "M2SL", freq: "M", scale: 0.001 },
   gold:         { source: "yahoo", symbol: "GC=F" },
   silver:       { source: "yahoo", symbol: "SI=F" },

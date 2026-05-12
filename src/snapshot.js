@@ -183,6 +183,28 @@ async function buildUsUnemp(env) {
   return { id: "us_unemp", region: "US", label: "美 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
 }
 
+// FRED M2 series: 단위가 "Billions of National Currency"라 KR/US 모두 /1000으로
+// 스케일링해 표시 단위 "조원"/"조$"에 맞춤. 12개월치 fetch로 stats(range bar) 채움.
+async function buildKrM2(env) {
+  const obs = await fetchFred("MYAGM2KRM189S", env, { limit: 16 });
+  const scaled = obs.map((o) => ({ date: o.date, value: Number.isFinite(o.value) ? o.value / 1000 : o.value }));
+  const { latest, prev, date } = pickLatestPrev(scaled);
+  const out = { id: "kr_m2", region: "KR", label: "한국 M2 (광의통화)", unit: "조원", value: latest, prev, delta: deltaPair(latest, prev), date };
+  const stats = computeStats(scaled.slice().reverse());
+  if (stats) out.stats = stats;
+  return out;
+}
+
+async function buildUsM2(env) {
+  const obs = await fetchFred("M2SL", env, { limit: 16 });
+  const scaled = obs.map((o) => ({ date: o.date, value: Number.isFinite(o.value) ? o.value / 1000 : o.value }));
+  const { latest, prev, date } = pickLatestPrev(scaled);
+  const out = { id: "us_m2", region: "US", label: "美 M2 (광의통화)", unit: "조$", value: latest, prev, delta: deltaPair(latest, prev), date };
+  const stats = computeStats(scaled.slice().reverse());
+  if (stats) out.stats = stats;
+  return out;
+}
+
 async function buildYahooCard({ id, region, label, unit, symbol }) {
   // Single 1y fetch for value + prev + stats — keeps subrequest count low
   const q = await fetchYahooQuote(symbol, { range: "1y" });
@@ -296,6 +318,8 @@ const BUILDERS = [
   { id: "us_10y", fn: buildUs10y },
   { id: "kr_unemp", fn: buildKrUnemp },
   { id: "us_unemp", fn: buildUsUnemp },
+  { id: "kr_m2", fn: buildKrM2 },
+  { id: "us_m2", fn: buildUsM2 },
   { id: "kospi", fn: buildKospi },
   { id: "kosdaq", fn: buildKosdaq },
   { id: "sp500", fn: buildSp500 },
@@ -323,6 +347,7 @@ export async function buildSnapshot(env) {
     "kospi", "kosdaq", "sp500", "nasdaq",
     "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
+    "kr_m2", "us_m2",
     "gold", "silver", "copper", "btc",
     "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
     "kia", "naver", "celltrion", "posco", "kakao",

@@ -16,6 +16,8 @@ const QUERIES = {
   us_cpi_yoy:   { q: "US CPI inflation report" },
   kr_unemp:     { q: "한국 실업률 고용", ko: true },
   us_unemp:     { q: "US unemployment rate jobs report" },
+  kr_m2:        { q: "한국 M2 통화량 광의통화 유동성", ko: true },
+  us_m2:        { q: "US M2 money supply Fed broad money" },
   gold:         { q: "gold price ounce" },
   silver:       { q: "silver price" },
   copper:       { q: "copper price" },

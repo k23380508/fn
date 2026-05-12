@@ -26,6 +26,7 @@ function fmtValue(v, unit) {
     ? v.toLocaleString("ko-KR", { maximumFractionDigits: 2 })
     : v.toFixed(2);
   if (unit === "원") return `${s} ${unit}`;
+  if (unit === "조원" || unit === "조$") return `${s} ${unit}`;
   if (unit === "$") return `$${s}`;
   if (unit === "HK$") return `HK$${s}`;
   if (unit) return `${s}${unit}`;
@@ -61,6 +62,7 @@ const CHARTABLE_IDS = new Set([
   "usd_krw", "kospi", "kosdaq", "sp500", "nasdaq", "vix",
   "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
   "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
+  "kr_m2", "us_m2",
   "gold", "silver", "copper", "btc",
   "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
   "kia", "naver", "celltrion", "posco", "kakao",
@@ -220,6 +222,7 @@ const ALWAYS_REASON_IDS = new Set([
   "kospi", "kosdaq", "sp500", "nasdaq",
   "kr_cpi_yoy", "us_cpi_yoy",
   "kr_unemp", "us_unemp",
+  "kr_m2", "us_m2",
   // 한국 빅테크 (시총 풀 + 변동성 풀)
   "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",
   "kia", "naver", "celltrion", "posco", "kakao",
@@ -365,6 +368,7 @@ export function renderHtml(snapshot, _news, calendar) {
   const ratesIds = ["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"];
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
+  const moneyIds = ["kr_m2", "us_m2"];
   const assetIds = ["gold", "silver", "copper", "btc"];
   // 한국 빅테크 4개 = 시총 풀 |Δ| top 3 + movers 풀 max- 1 (dedupe)
   const krTop3 = pickTopMovers(byId, KR_TECH_POOL, 3);
@@ -381,6 +385,7 @@ export function renderHtml(snapshot, _news, calendar) {
   const ratesHtml = ratesIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const inflHtml = inflationIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const laborHtml = laborIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
+  const moneyHtml = moneyIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const assetHtml = assetIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const krTechHtml = krTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const usTechHtml = usTechIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
@@ -617,6 +622,9 @@ export function renderHtml(snapshot, _news, calendar) {
   <h2>고용</h2>
   <div class="grid">${laborHtml}</div>
 
+  <h2>통화량 (M2)</h2>
+  <div class="grid">${moneyHtml}</div>
+
   <h2>원자재 & 가상자산</h2>
   <div class="grid four">${assetHtml}</div>
 
@@ -677,6 +685,7 @@ export function renderHtml(snapshot, _news, calendar) {
   function fmtVal(v, unit) {
     var s = fmtNum(v);
     if (unit === "원") return s + " 원";
+    if (unit === "조원" || unit === "조$") return s + " " + unit;
     if (unit === "$") return "$" + s;
     if (unit === "HK$") return "HK$" + s;
     if (unit) return s + unit;

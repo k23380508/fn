@@ -23,6 +23,8 @@ export const SERIES_REGISTRY = {
   us_cpi_yoy:   { source: "fred", id: "CPIAUCSL", freq: "M", computeYoy: true },
   kr_unemp:     { source: "fred", id: "LRHUTTTTKRM156S", freq: "M" },
   us_unemp:     { source: "fred", id: "UNRATE", freq: "M" },
+  kr_m2:        { source: "fred", id: "MYAGM2KRM189S", freq: "M", scale: 0.001 },
+  us_m2:        { source: "fred", id: "M2SL", freq: "M", scale: 0.001 },
   gold:         { source: "yahoo", symbol: "GC=F" },
   silver:       { source: "yahoo", symbol: "SI=F" },
   copper:       { source: "yahoo", symbol: "HG=F" },
@@ -73,18 +75,19 @@ export async function fetchSeries(id, range, env) {
   if (!def) throw new Error(`unknown series id: ${id}`);
   if (!RANGE_DAYS[range]) throw new Error(`unknown range: ${range}`);
 
+  const scale = Number.isFinite(def.scale) ? def.scale : 1;
   if (def.source === "fred") {
     const baseLimit = def.freq === "D" ? RANGE_DAYS[range] : RANGE_MONTHS[range];
     const limit = baseLimit + (def.computeYoy ? 12 : 0);
     const obs = await fetchFred(def.id, env, { limit });
-    const asc = obs.map((o) => ({ date: o.date, value: o.value })).reverse();
+    const asc = obs.map((o) => ({ date: o.date, value: o.value * scale })).reverse();
     return def.computeYoy ? computeYoy(asc) : asc;
   }
   if (def.source === "ecos") {
     const baseCount = def.freq === "D" ? RANGE_DAYS[range] : RANGE_MONTHS[range];
     const count = baseCount + (def.computeYoy ? 12 : 0);
     const obs = await fetchEcos(def.table, def.item, def.freq, env, { count });
-    const asc = obs.map((o) => ({ date: o.date, value: o.value })).reverse();
+    const asc = obs.map((o) => ({ date: o.date, value: o.value * scale })).reverse();
     return def.computeYoy ? computeYoy(asc) : asc;
   }
   if (def.source === "yahoo") {

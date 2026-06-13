@@ -186,6 +186,68 @@ function statsBlock(item) {
   return `<div class="stats">${html}</div>`;
 }
 
+// === 레인지 위치 매수/매도 신호 ===
+// 카드의 1M·3M·6M·1Y 레인지 내 현재 위치(%)로 저점권/고점권 컨플루언스 판정.
+// 기술적 신호일 뿐 투자 자문 아님. 임계값은 카드 range bar의 🔥신고가/신저가권과 동일(8/92).
+const SIGNAL_NEAR_LOW = 8;
+const SIGNAL_NEAR_HIGH = 92;
+// 매매 타이밍 신호 제외 (거시 통화량 — 매수/매도 개념 부적합)
+const SIGNAL_EXCLUDE = new Set(["kr_m2", "us_m2"]);
+
+function rangePosFor(item, key) {
+  const s = item?.stats?.[key];
+  if (!s || !Number.isFinite(s.hi) || !Number.isFinite(s.lo) || !Number.isFinite(item.value)) return null;
+  if (s.hi === s.lo) return null; // 변동 없음(동결) → 신호 제외
+  return Math.max(0, Math.min(100, ((item.value - s.lo) / (s.hi - s.lo)) * 100));
+}
+
+// buy: 1M·3M·6M 모두 저점권(≤8%) → tier "6m"; 1Y까지 모두면 tier "1y"(강). sell은 고점권(≥92%).
+function rangeSignal(item) {
+  if (!item || item.error || SIGNAL_EXCLUDE.has(item.id)) return null;
+  const p1 = rangePosFor(item, "1M"), p3 = rangePosFor(item, "3M"), p6 = rangePosFor(item, "6M"), py = rangePosFor(item, "1Y");
+  if (p1 == null || p3 == null || p6 == null) return null; // 1M·3M·6M 필수
+  const isLow = (p) => p != null && p <= SIGNAL_NEAR_LOW;
+  const isHigh = (p) => p != null && p >= SIGNAL_NEAR_HIGH;
+  if (isLow(p1) && isLow(p3) && isLow(p6)) return { side: "buy", tier: isLow(py) ? "1y" : "6m" };
+  if (isHigh(p1) && isHigh(p3) && isHigh(p6)) return { side: "sell", tier: isHigh(py) ? "1y" : "6m" };
+  return null;
+}
+
+function signalItem(item, sig) {
+  const d = fmtDelta(item.delta, item.unit);
+  const word = sig.side === "buy" ? "저점권" : "고점권";
+  const tierTag = sig.tier === "1y"
+    ? `<span class="sig-tier strong">1Y ${word}</span>`
+    : `<span class="sig-tier">6M ${word}</span>`;
+  const chartable = CHARTABLE_IDS.has(item.id);
+  const attr = chartable ? ` data-series-id="${escape(item.id)}" data-label="${escape(item.label)}" tabindex="0" role="button"` : "";
+  return `<div class="sig-item ${sig.side}${chartable ? " clickable" : ""}"${attr}>
+      <div class="sig-head">${regionBadge(item.region)}<span class="sig-label">${escape(item.label)}</span>${tierTag}</div>
+      <div class="sig-val">${escape(fmtValue(item.value, item.unit))} <span class="delta ${d.dir}">${escape(d.text)}</span></div>
+    </div>`;
+}
+
+function signalSection(snapshot) {
+  const items = snapshot.items || [];
+  const buys = [], sells = [];
+  for (const it of items) {
+    const sig = rangeSignal(it);
+    if (!sig) continue;
+    (sig.side === "buy" ? buys : sells).push({ it, sig });
+  }
+  const rank = (x) => (x.sig.tier === "1y" ? 0 : 1); // 강한 신호(1Y) 먼저
+  buys.sort((a, b) => rank(a) - rank(b));
+  sells.sort((a, b) => rank(a) - rank(b));
+  const heading = `<h2>📊 레인지 위치 신호 <span class="h2-hint">1M·3M·6M 동시 저점/고점권 (1Y까지면 강) · 기술적 신호일 뿐 투자 자문 아님</span></h2>`;
+  if (!buys.length && !sells.length) {
+    return `${heading}<div class="sig-empty">현재 1M·3M·6M가 동시에 저점권/고점권인 종목이 없습니다.</div>`;
+  }
+  const col = (arr, side, label) => arr.length
+    ? `<div class="sig-col"><div class="sig-col-head ${side}">${label} (${arr.length})</div><div class="sig-grid">${arr.map((x) => signalItem(x.it, x.sig)).join("")}</div></div>`
+    : "";
+  return `${heading}<div class="sig-wrap">${col(buys, "buy", "📉 저점권 — 매수 후보")}${col(sells, "sell", "📈 고점권 — 매도 후보")}</div>`;
+}
+
 function card(item, hero = false) {
   if (item.error) {
     return `
@@ -557,6 +619,25 @@ export function renderHtml(snapshot, _news, calendar) {
   .rate-row.now .rate-label { color: var(--kr); }
   .rate-date { color: var(--muted); font-size: 10px; }
   .rate-value { text-align: right; }
+  .sig-wrap { display: grid; grid-template-columns: 1fr; gap: 12px; margin-bottom: 8px; }
+  @media (min-width: 768px) { .sig-wrap { grid-template-columns: 1fr 1fr; } }
+  .sig-col { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .sig-col-head { font-size: 12px; font-weight: 700; letter-spacing: 0.03em; margin-bottom: 10px; }
+  .sig-col-head.buy { color: var(--up); }
+  .sig-col-head.sell { color: var(--down); }
+  .sig-grid { display: flex; flex-direction: column; gap: 8px; }
+  .sig-item { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: rgba(255,255,255,0.02); position: relative; }
+  .sig-item.buy { border-left: 3px solid var(--up); }
+  .sig-item.sell { border-left: 3px solid var(--down); }
+  .sig-item.clickable { cursor: pointer; transition: border-color 0.1s, transform 0.1s; }
+  .sig-item.clickable:hover { border-color: var(--kr); transform: translateY(-1px); }
+  .sig-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 3px; }
+  .sig-label { font-size: 13px; font-weight: 600; }
+  .sig-tier { font-size: 9px; font-weight: 800; padding: 1px 6px; border-radius: 4px; letter-spacing: 0.03em; background: rgba(138,147,166,0.18); color: var(--muted); white-space: nowrap; }
+  .sig-tier.strong { background: rgba(245,158,11,0.20); color: var(--us); }
+  .sig-val { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .sig-val .delta { font-size: 12px; }
+  .sig-empty { color: var(--muted); font-size: 13px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; margin-bottom: 8px; }
   .h2-hint { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
   .cal-today { background: var(--card); border: 1px solid var(--kr); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; box-shadow: 0 0 0 1px rgba(59,130,246,0.18); }
   .cal-today-head { font-size: 12px; font-weight: 700; color: var(--kr); margin-bottom: 8px; letter-spacing: 0.04em; }
@@ -602,6 +683,8 @@ export function renderHtml(snapshot, _news, calendar) {
     <h1>🌏 KR vs US 거시 대시보드</h1>
     <div class="updated">마지막 업데이트: ${escape(fmtKst(snapshot.generatedAt))}</div>
   </header>
+
+  ${signalSection(snapshot)}
 
   ${calendarSection(calendar)}
 

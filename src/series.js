@@ -77,7 +77,13 @@ export async function fetchSeries(id, range, env) {
   }
   if (def.source === "ecos") {
     const baseCount = def.freq === "D" ? RANGE_DAYS[range] : RANGE_MONTHS[range];
-    const count = baseCount + (def.computeYoy ? 12 : 0);
+    // ECOS monthly series publish with a ~1-3 month lag, so a narrow window
+    // (e.g. 1M=2개월) can land entirely in not-yet-published months → ECOS
+    // "해당하는 데이터가 없습니다" error. Widen monthly requests by a lag buffer
+    // so short ranges still reach published data (extra months are harmless for
+    // the chart, and let longer ranges show a full span of published points).
+    const lagBuffer = def.freq === "M" ? 3 : 0;
+    const count = baseCount + (def.computeYoy ? 12 : 0) + lagBuffer;
     const obs = await fetchEcos(def.table, def.item, def.freq, env, { count });
     const asc = obs.map((o) => ({ date: o.date, value: o.value * scale })).reverse();
     return def.computeYoy ? computeYoy(asc) : asc;

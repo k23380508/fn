@@ -13,13 +13,15 @@ const SECURITY_HEADERS = {
   "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
   // CSP: page uses inline script + style for charts/modals, so allow self+inline.
-  // Restricts loading of external scripts/iframes; img/connect kept open for self-fetched APIs.
+  // External scripts blocked; only TradingView chart iframes allowed (frame-src) for
+  // the click-through chart modal. img/connect kept open for self-fetched APIs.
   "Content-Security-Policy":
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline'; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data:; " +
     "connect-src 'self'; " +
+    "frame-src https://s.tradingview.com https://www.tradingview.com; " +
     "frame-ancestors 'self'; " +
     "base-uri 'self'; " +
     "form-action 'self'",

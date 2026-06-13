@@ -665,6 +665,20 @@ export function renderHtml(snapshot, _news, calendar) {
   var tabs = document.getElementById("range-tabs");
   var modeTabs = document.getElementById("mode-tabs");
   var current = { id: null, label: null, range: "1M", mode: "value", series: [], unit: "" };
+  // TradingView 심볼 매핑 — 있으면 클릭 시 TradingView 차트(캔들·지표·그리기) iframe,
+  // 없으면(M2 등 TradingView 미지원 지표) 아래 자체 SVG 막대 차트로 폴백.
+  var TV_SYMBOLS = {
+    usd_krw: "FX_IDC:USDKRW", vix: "TVC:VIX",
+    kospi: "KRX:KOSPI", kosdaq: "KRX:KOSDAQ", sp500: "SP:SPX", nasdaq: "NASDAQ:IXIC",
+    gold: "TVC:GOLD", silver: "TVC:SILVER", copper: "COMEX:HG1!", btc: "BINANCE:BTCUSDT",
+    samsung: "KRX:005930", sk_hynix: "KRX:000660", lg_energy: "KRX:373220", samsung_bio: "KRX:207940",
+    hyundai: "KRX:005380", kia: "KRX:000270", naver: "KRX:035420", celltrion: "KRX:068270",
+    posco: "KRX:005490", kakao: "KRX:035720", hanwha_aero: "KRX:012450", ecopro_bm: "KRX:247540", alteogen: "KRX:196170",
+    apple: "NASDAQ:AAPL", microsoft: "NASDAQ:MSFT", nvidia: "NASDAQ:NVDA", google: "NASDAQ:GOOGL",
+    amazon: "NASDAQ:AMZN", meta: "NASDAQ:META", tesla: "NASDAQ:TSLA", broadcom: "NASDAQ:AVGO",
+    berkshire: "NYSE:BRK.B", jpmorgan: "NYSE:JPM", amd: "NASDAQ:AMD", palantir: "NASDAQ:PLTR",
+    arq_etf: "AMEX:ARKQ", gld_etf: "AMEX:GLD", xlc_etf: "AMEX:XLC", xlu_etf: "AMEX:XLU"
+  };
 
   function fmtNum(v) {
     if (!isFinite(v)) return "—";
@@ -724,6 +738,24 @@ export function renderHtml(snapshot, _news, calendar) {
 
   function open(id, label) {
     current.id = id; current.label = label; current.range = "1M"; current.mode = "value"; current.series = []; current.unit = "";
+    titleEl.textContent = label;
+    var tvSym = TV_SYMBOLS[id];
+    if (tvSym) {
+      tabs.style.display = "none";
+      modeTabs.style.display = "none";
+      detailEl.style.display = "none";
+      metaEl.style.display = "none";
+      var src = "https://s.tradingview.com/widgetembed/?symbol=" + encodeURIComponent(tvSym) +
+        "&interval=D&theme=dark&style=1&locale=kr&timezone=Asia%2FSeoul" +
+        "&hide_side_toolbar=0&allow_symbol_change=0&withdateranges=1&hideideas=1&saveimage=0";
+      hostEl.innerHTML = '<iframe title="' + label + ' TradingView" src="' + src + '" style="width:100%;height:62vh;min-height:420px;border:0;border-radius:8px;background:var(--card);" allowfullscreen></iframe>';
+      modal.classList.remove("hidden");
+      return;
+    }
+    tabs.style.display = "";
+    modeTabs.style.display = "";
+    detailEl.style.display = "";
+    metaEl.style.display = "";
     setActiveMode("value");
     var card = document.querySelector('[data-series-id="' + id + '"]');
     if (card) {
@@ -737,12 +769,11 @@ export function renderHtml(snapshot, _news, calendar) {
       }
     }
     setActiveTab("1M");
-    titleEl.textContent = label;
     resetDetail();
     modal.classList.remove("hidden");
     load();
   }
-  function close() { modal.classList.add("hidden"); }
+  function close() { modal.classList.add("hidden"); hostEl.innerHTML = ""; }
   function setActiveTab(r) {
     tabs.querySelectorAll("button").forEach(function (b) {
       b.classList.toggle("active", b.dataset.range === r);

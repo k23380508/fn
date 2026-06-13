@@ -665,14 +665,13 @@ export function renderHtml(snapshot, _news, calendar) {
   var tabs = document.getElementById("range-tabs");
   var modeTabs = document.getElementById("mode-tabs");
   var current = { id: null, label: null, range: "1M", mode: "value", series: [], unit: "" };
-  // TradingView 심볼 매핑 — 무료 임베드 위젯이 실제 표시 가능한 심볼만 등록 (브라우저 실측 검증).
-  // 무료 위젯은 한국거래소(KRX) 종목·코스피/코스닥, 일부 지수·선물을 차단("TradingView에서만
-  // 제공") → US 지수/VIX/구리는 CFD 프록시(OANDA/CAPITALCOM)로 대체, 한국 종목·지수와
-  // M2 등 미지원 카드는 아래 자체 SVG 막대 차트로 폴백.
+  // TradingView 심볼 매핑 — 카드 값과 "같은 대상"인 심볼만 등록 (출처 불일치 방지).
+  // 폴백(자체 SVG, 카드와 100% 일치) 대상: ① 무료 위젯 미지원 KRX 한국종목·코스피/코스닥,
+  // ② 카드와 다른 상품인 지표 — 나스닥(종합 ^IXIC vs 나스닥100)·금·은·구리(선물 vs 현물/CFD), ③ M2.
+  // 유지: 미국주식·BTC·환율·S&P·VIX·ETF (사실상 동일 대상이라 값 일치).
   var TV_SYMBOLS = {
     usd_krw: "FX_IDC:USDKRW", vix: "CAPITALCOM:VIX",
-    sp500: "OANDA:SPX500USD", nasdaq: "OANDA:NAS100USD",
-    gold: "TVC:GOLD", silver: "TVC:SILVER", copper: "CAPITALCOM:COPPER", btc: "BINANCE:BTCUSDT",
+    sp500: "OANDA:SPX500USD", btc: "BINANCE:BTCUSDT",
     apple: "NASDAQ:AAPL", microsoft: "NASDAQ:MSFT", nvidia: "NASDAQ:NVDA", google: "NASDAQ:GOOGL",
     amazon: "NASDAQ:AMZN", meta: "NASDAQ:META", tesla: "NASDAQ:TSLA", broadcom: "NASDAQ:AVGO",
     berkshire: "NYSE:BRK.B", jpmorgan: "NYSE:JPM", amd: "NASDAQ:AMD", palantir: "NASDAQ:PLTR",

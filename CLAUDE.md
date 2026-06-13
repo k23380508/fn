@@ -63,14 +63,14 @@ Repo: https://github.com/k23380508/mp1
 
 ## 다중 기기/세션 작업 규칙 (필수)
 
-이 프로젝트는 iCloud Drive(`~/Library/Mobile Documents/.../ID/VC/mp1`)에 있어 여러 기기에서 동시 접근 가능. iCloud의 비동기 파일 sync와 git이 충돌하면 `.git/index` 깨짐, ref 분기, 미푸시 손실 발생.
+이 프로젝트는 Google Drive(`~/Library/CloudStorage/GoogleDrive-…/내 드라이브/GDP/MP/mp1`)에 있어 여러 기기에서 동시 접근 가능. Google Drive의 비동기 파일 sync와 git이 충돌하면 `.git/index` 깨짐, ref 분기, 미푸시 손실 발생.
 
 **모든 세션에서 반드시 따른다:**
 
 ### 세션 시작 시 (작업 시작 전 항상)
 1. `git status` — 미커밋 변경 확인
 2. `git pull --ff-only origin main` — 원격이 앞서 있으면 가져옴. **non-fast-forward면 즉시 STOP**, 사용자에게 alert (다른 기기 작업과 분기됨)
-3. iCloud placeholder가 있으면 `brctl download .` 로 강제 다운로드
+3. Google Drive online-only(스트리밍) 파일은 접근 시 자동 다운로드되지만, 확실히 하려면 Finder에서 폴더 우클릭 → "오프라인 사용 설정(Available offline)"
 4. `npm install` — package-lock 변경됐을 수 있음
 
 ### 작업 중
@@ -81,10 +81,10 @@ Repo: https://github.com/k23380508/mp1
 ### 세션 종료 전 (필수)
 8. `git status` — working tree clean 확인
 9. `git push origin <branch>` — **미푸시 0개 보장**
-10. 30초 대기 — iCloud 메뉴바 아이콘이 "Updated" 될 때까지 (다른 기기 즉시 사용 시)
+10. 30초 대기 — Google Drive 메뉴바 아이콘이 동기화 완료될 때까지 (다른 기기 즉시 사용 시)
 
 ### 절대 금지
-- iCloud sync에 의존해서 git 없이 다른 기기로 옮기기 (`.git/` 부분 sync 시 repo 깨짐)
+- Google Drive sync에 의존해서 git 없이 다른 기기로 옮기기 (`.git/` 부분 sync 시 repo 깨짐)
 - 미푸시 상태로 다른 기기 시작 (분기 발생 → 오늘처럼 수동 cherry-pick 필요)
 - 두 기기 동시 작업 (한 시점에 한 기기만)
 - `git push --force` (다른 기기 미푸시 작업 날아감)

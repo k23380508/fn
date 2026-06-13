@@ -201,29 +201,40 @@ function rangePosFor(item, key) {
   return Math.max(0, Math.min(100, ((item.value - s.lo) / (s.hi - s.lo)) * 100));
 }
 
-// buy: 1M·3M·6M 모두 저점권(≤8%) → tier "6m"; 1Y까지 모두면 tier "1y"(강). sell은 고점권(≥92%).
+// buy: 1M·3M·6M 모두 저점권(≤8%) → 후보; 1Y까지 모두면 강(tier "1y"). sell은 고점권(≥92%).
+// periods: 4개 기간별 위치(pos)·신호권 적중(hit) — "몇 개가 저점/고점권인지" 표시용.
 function rangeSignal(item) {
   if (!item || item.error || SIGNAL_EXCLUDE.has(item.id)) return null;
-  const p1 = rangePosFor(item, "1M"), p3 = rangePosFor(item, "3M"), p6 = rangePosFor(item, "6M"), py = rangePosFor(item, "1Y");
-  if (p1 == null || p3 == null || p6 == null) return null; // 1M·3M·6M 필수
+  const keys = ["1M", "3M", "6M", "1Y"];
+  const pos = {};
+  for (const k of keys) pos[k] = rangePosFor(item, k);
+  if (pos["1M"] == null || pos["3M"] == null || pos["6M"] == null) return null; // 1M·3M·6M 필수
   const isLow = (p) => p != null && p <= SIGNAL_NEAR_LOW;
   const isHigh = (p) => p != null && p >= SIGNAL_NEAR_HIGH;
-  if (isLow(p1) && isLow(p3) && isLow(p6)) return { side: "buy", tier: isLow(py) ? "1y" : "6m" };
-  if (isHigh(p1) && isHigh(p3) && isHigh(p6)) return { side: "sell", tier: isHigh(py) ? "1y" : "6m" };
-  return null;
+  let side = null;
+  if (isLow(pos["1M"]) && isLow(pos["3M"]) && isLow(pos["6M"])) side = "buy";
+  else if (isHigh(pos["1M"]) && isHigh(pos["3M"]) && isHigh(pos["6M"])) side = "sell";
+  else return null;
+  const hit = side === "buy" ? isLow : isHigh;
+  const periods = keys.map((k) => ({ key: k, pos: pos[k], hit: hit(pos[k]) }));
+  return { side, periods, hitCount: periods.filter((p) => p.hit).length, tier: hit(pos["1Y"]) ? "1y" : "6m" };
 }
 
 function signalItem(item, sig) {
   const d = fmtDelta(item.delta, item.unit);
   const word = sig.side === "buy" ? "저점권" : "고점권";
-  const tierTag = sig.tier === "1y"
-    ? `<span class="sig-tier strong">1Y ${word}</span>`
-    : `<span class="sig-tier">6M ${word}</span>`;
+  const cntTag = `<span class="sig-tier${sig.tier === "1y" ? " strong" : ""}">${sig.hitCount}/4 ${word}</span>`;
+  const chips = sig.periods.map((p) => {
+    const val = p.pos == null ? "—" : Math.round(p.pos) + "%";
+    const cls = p.hit ? (sig.side === "buy" ? "low" : "high") : (p.pos == null ? "na" : "off");
+    return `<span class="sig-pchip ${cls}" title="${p.key} 레인지 위치 ${val} (0%=저점, 100%=고점)">${p.key} ${val}</span>`;
+  }).join("");
   const chartable = CHARTABLE_IDS.has(item.id);
   const attr = chartable ? ` data-series-id="${escape(item.id)}" data-label="${escape(item.label)}" tabindex="0" role="button"` : "";
   return `<div class="sig-item ${sig.side}${chartable ? " clickable" : ""}"${attr}>
-      <div class="sig-head">${regionBadge(item.region)}<span class="sig-label">${escape(item.label)}</span>${tierTag}</div>
+      <div class="sig-head">${regionBadge(item.region)}<span class="sig-label">${escape(item.label)}</span>${cntTag}</div>
       <div class="sig-val">${escape(fmtValue(item.value, item.unit))} <span class="delta ${d.dir}">${escape(d.text)}</span></div>
+      <div class="sig-periods">${chips}</div>
     </div>`;
 }
 
@@ -637,6 +648,12 @@ export function renderHtml(snapshot, _news, calendar) {
   .sig-tier.strong { background: rgba(245,158,11,0.20); color: var(--us); }
   .sig-val { font-size: 13px; font-variant-numeric: tabular-nums; color: var(--muted); display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .sig-val .delta { font-size: 12px; }
+  .sig-periods { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
+  .sig-pchip { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums; background: rgba(138,147,166,0.12); color: var(--muted); white-space: nowrap; }
+  .sig-pchip.low { background: rgba(34,197,94,0.20); color: var(--up); }
+  .sig-pchip.high { background: rgba(239,68,68,0.20); color: var(--down); }
+  .sig-pchip.off { opacity: 0.85; }
+  .sig-pchip.na { opacity: 0.4; }
   .sig-empty { color: var(--muted); font-size: 13px; padding: 10px 12px; border: 1px dashed var(--border); border-radius: 8px; margin-bottom: 8px; }
   .h2-hint { font-size: 11px; color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; margin-left: 6px; }
   .cal-today { background: var(--card); border: 1px solid var(--kr); border-radius: 10px; padding: 12px 14px; margin-bottom: 16px; box-shadow: 0 0 0 1px rgba(59,130,246,0.18); }

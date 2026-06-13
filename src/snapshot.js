@@ -34,10 +34,9 @@ function computeStats(series) {
   return Object.keys(out).length ? out : null;
 }
 
-// 무료 plan subrequest 50 한도 보호 — ETF 5개 추가 후 enrich에서 추가 fetch
-// 공간 부족. cpi/unemp stats(range bar)는 trade-off로 비활성. 빌더가 처리하지
-// 않는 다른 카드(향후 추가)는 enrich가 fallback으로 채움.
-const ENRICH_SKIP_IDS = new Set(["kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp"]);
+// 무료 plan subrequest 50 한도 보호용 skip 셋 — 빌더가 stats를 직접 채우지 않는
+// 카드는 enrich가 fallback으로 range-bar stats를 채움. (현재 skip 대상 없음)
+const ENRICH_SKIP_IDS = new Set();
 
 async function enrichWithStats(items, env) {
   const FALLBACK_RANGES = ["1Y", "6M", "3M", "1M"];
@@ -66,60 +65,6 @@ function deltaPair(latest, prev) {
 
 function pickLatestPrev(series) {
   return { latest: series[0]?.value, prev: series[1]?.value, date: series[0]?.date };
-}
-
-// CPI YoY 카드용 이력: 최신 n개월의 YoY 값 (dedup 없음 — 매월이 별도 데이터).
-// obs는 monthly desc, obs[i].value=원지수. obs[i] vs obs[i+12]로 YoY 계산.
-// n=3이면 obs[14]까지 필요 (16개 fetch면 안전).
-function cpiHistory(obs, n = 3) {
-  const out = [];
-  for (let i = 0; i < n; i++) {
-    const cur = obs[i];
-    const yearAgo = obs[i + 12];
-    if (!cur || !yearAgo || !yearAgo.value) continue;
-    const yoy = ((cur.value - yearAgo.value) / yearAgo.value) * 100;
-    out.push({ date: cur.date, value: yoy });
-  }
-  return out;
-}
-
-function computeYoYFromObs(obs) {
-  // obs: desc (최신 first). YoY = (latest - 12개월전) / 12개월전 * 100
-  const latest = obs[0];
-  const yearAgo = obs[12];
-  const prev = obs[1];
-  const yearAgoPrev = obs[13];
-  if (!latest || !yearAgo || !yearAgo.value) return { value: null, prev: null, date: latest?.date };
-  const value = ((latest.value - yearAgo.value) / yearAgo.value) * 100;
-  const prevVal = (prev && yearAgoPrev && yearAgoPrev.value)
-    ? ((prev.value - yearAgoPrev.value) / yearAgoPrev.value) * 100
-    : null;
-  return { value, prev: prevVal, date: latest.date };
-}
-
-async function buildKrCpiYoy(env) {
-  // YoY 계산용 16개월치 한 번에 fetch (이전엔 fetchEcosYoY + fetchEcos 2회 호출)
-  const obs = await fetchEcos("901Y009", "0", "M", env, { count: 16 });
-  const yoy = computeYoYFromObs(obs);
-  return { id: "kr_cpi_yoy", region: "KR", label: "한국 CPI (전년동월비)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date, history: cpiHistory(obs, 3) };
-}
-
-async function buildUsCpiYoy(env) {
-  const obs = await fetchFred("CPIAUCSL", env, { limit: 16 });
-  const yoy = computeYoYFromObs(obs);
-  return { id: "us_cpi_yoy", region: "US", label: "美 CPI (YoY)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date, history: cpiHistory(obs, 3) };
-}
-
-async function buildKrUnemp(env) {
-  const obs = await fetchFred("LRHUTTTTKRM156S", env, { limit: 5 });
-  const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "kr_unemp", region: "KR", label: "한국 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
-}
-
-async function buildUsUnemp(env) {
-  const obs = await fetchFred("UNRATE", env, { limit: 2 });
-  const { latest, prev, date } = pickLatestPrev(obs);
-  return { id: "us_unemp", region: "US", label: "美 실업률", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date };
 }
 
 // M2 통화량: 표시 단위 "조원"/"조$". FRED M2SL은 십억$ 단위, ECOS 101Y004 BBHA00은
@@ -256,10 +201,6 @@ function makeBigtechBuilder(t) {
 }
 
 const BUILDERS = [
-  { id: "kr_cpi_yoy", fn: buildKrCpiYoy },
-  { id: "us_cpi_yoy", fn: buildUsCpiYoy },
-  { id: "kr_unemp", fn: buildKrUnemp },
-  { id: "us_unemp", fn: buildUsUnemp },
   { id: "kr_m2", fn: buildKrM2 },
   { id: "us_m2", fn: buildUsM2 },
   { id: "kospi", fn: buildKospi },
@@ -287,7 +228,6 @@ export async function buildSnapshot(env) {
   const order = [
     "usd_krw", "vix",
     "kospi", "kosdaq", "sp500", "nasdaq",
-    "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
     "kr_m2", "us_m2",
     "gold", "silver", "copper", "btc",
     "samsung", "sk_hynix", "lg_energy", "samsung_bio", "hyundai",

@@ -8,10 +8,6 @@ const QUERIES = {
   nasdaq:       { q: "NASDAQ index" },
   vix:          { q: "VIX volatility index" },
   usd_krw:      { q: "원달러 환율 USD KRW", ko: true },
-  kr_cpi_yoy:   { q: "한국 소비자물가 CPI", ko: true },
-  us_cpi_yoy:   { q: "US CPI inflation report" },
-  kr_unemp:     { q: "한국 실업률 고용", ko: true },
-  us_unemp:     { q: "US unemployment rate jobs report" },
   kr_m2:        { q: "한국 M2 통화량 광의통화 유동성", ko: true },
   us_m2:        { q: "US M2 money supply Fed broad money" },
   gold:         { q: "gold price ounce" },
@@ -98,14 +94,6 @@ const STATIC_ANALYSIS = {
 
   // FX
   usd_krw:      "Fed 인하 속도 후퇴 우려와 한미 금리차 부담으로 원화 약세 재개, 1,475원(+1.4%). 5월 저점 1,444원에서 31원 반등하며 1M 고점 1,487원 근접.",
-
-  // 물가
-  kr_cpi_yoy:   "에너지·식료품 가격 일시 상승으로 CPI 2.16% 반등. 한은은 연말 2% 안팎 수렴 전망 유지.",
-  us_cpi_yoy:   "서비스 인플레 끈적임과 에너지 가격 상승으로 미 CPI 3.32%로 가속. 4% 위협 우려 부각.",
-
-  // 고용
-  kr_unemp:     "청년층 신규 고용 회복과 AI/반도체 채용 확대로 한국 실업률 2.9%로 추가 하락. 노동시장 견조.",
-  us_unemp:     "기업 감원 둔화와 서비스업 신규 채용 증가로 미국 실업률 4.3%로 소폭 개선.",
 
   // 원자재
   gold:         "중동 지정학 리스크와 Fed 인하 기대로 안전자산 수요 확대. 금 $4,500선에서 사상 최고 권역.",

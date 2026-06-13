@@ -41,15 +41,25 @@ Repo: https://github.com/k23380508/mp1
 
 **금지**: "일단 핵심만 고치고 나머지는 나중에" — 연쇄 깨짐 1순위 원인. grep 생략 금지. 데이터 shape 변경 후 한 층만 수정 금지.
 
-## 자동 push (필수)
+## 자동 push & 브랜치 수명주기 (필수)
 
-모든 commit은 **즉시** GitHub origin으로 push. commit과 push는 한 단위.
+**main이 트렁크다** = 배포본 = 단일 기준선 (2026-06-13 정리 완료, main 보호 없음). 기본 작업 위치는 main.
 
-- main push 차단 시 자동 우회: `fix/`·`feat/`·`wip/`·`chore/`·`data/<topic>` 브랜치 생성 후 push, PR 링크 안내
-- 세션 종료 전 `git status` clean + `git log @{u}..` 비어있어야 함 (미푸시 0)
-- push 전 staged diff에서 secret/.env 확인
-- `git push --force` 금지 (사용자가 명시 요청해도 한 번 더 확인)
-- 상세는 글로벌 메모리 [auto_push_rule.md] 참조
+### 기본: main에서 직접 작업
+- 대부분의 변경(버그 수정·카드 추가/삭제·문구 수정 등)은 **브랜치 만들지 말고 main에서 바로 commit → 즉시 push**. commit과 push는 한 단위.
+- 이러면 브랜치가 안 생기고 main이 항상 최신을 유지함.
+
+### 브랜치는 임시 작업대 — 쓰면 반드시 회수
+- 브랜치는 **위험·대규모·실험적 변경**일 때만 (예: 깨질 위험 큰 리팩터, 검증 전 WIP). 이름: `fix/`·`feat/`·`chore/`·`wip/<topic>`.
+- **완료 즉시 회수**: `git switch main && git merge --ff-only <branch>` → `git push origin main` → 브랜치 삭제 `git branch -d <branch>` + `git push origin --delete <branch>`.
+- ⛔ **고아 브랜치 금지**: "작업 끝났는데 브랜치만 남기고 main 미반영" 상태로 두지 말 것 — **과거 브랜치 50개가 쌓인 원인.** 브랜치는 main에 병합되거나 삭제되기 전엔 "미완료"로 간주.
+- main push가 실제로 막힌 경우에만 PR 생성 후 링크 안내.
+
+### 공통
+- push 전 staged diff에서 secret/.env 확인.
+- `git push --force` 금지 (사용자가 명시 요청해도 한 번 더 확인).
+- 세션 종료 전: `git status` clean + `git log @{u}..` 비어있음(미푸시 0) + **`git branch` 결과가 `main` + 의도적으로 보존하는 WIP뿐인지 확인**.
+- 상세는 글로벌 메모리 [auto_push_rule.md] 참조.
 
 ## 다중 기기/세션 작업 규칙 (필수)
 

@@ -60,7 +60,6 @@ function regionBadge(region) {
 
 const CHARTABLE_IDS = new Set([
   "usd_krw", "kospi", "kosdaq", "sp500", "nasdaq", "vix",
-  "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
   "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
   "kr_m2", "us_m2",
   "gold", "silver", "copper", "btc",
@@ -235,9 +234,9 @@ const ALWAYS_REASON_IDS = new Set([
   "arq_etf", "gld_etf", "smrf_etf", "xlc_etf", "xlu_etf",
 ]);
 
-// 금리·CPI·M2 카드용 history 표시. history 배열 길이 ≤3이면 "현재/직전/그 이전",
+// CPI·M2 카드용 history 표시. history 배열 길이 ≤3이면 "현재/직전/그 이전",
 // 그보다 길면(M2 5개) "현재/1개월 전/2개월 전/..." 라벨로 자동 전환. 다른 카드는 빈 문자열.
-const RATE_HISTORY_IDS = new Set(["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y", "kr_cpi_yoy", "us_cpi_yoy", "kr_m2", "us_m2"]);
+const RATE_HISTORY_IDS = new Set(["kr_cpi_yoy", "us_cpi_yoy", "kr_m2", "us_m2"]);
 
 function historyLabel(i, total) {
   if (i === 0) return "현재";
@@ -374,7 +373,6 @@ export function renderHtml(snapshot, _news, calendar) {
   const byId = Object.fromEntries(snapshot.items.map((i) => [i.id, i]));
   const heroIds = ["usd_krw", "vix"];
   const equityIds = ["kospi", "kosdaq", "sp500", "nasdaq"];
-  const ratesIds = ["kr_base_rate", "us_fed_funds", "kr_10y", "us_10y"];
   const inflationIds = ["kr_cpi_yoy", "us_cpi_yoy"];
   const laborIds = ["kr_unemp", "us_unemp"];
   const moneyIds = ["kr_m2", "us_m2"];
@@ -391,7 +389,6 @@ export function renderHtml(snapshot, _news, calendar) {
 
   const heroHtml = heroIds.map((id) => card(byId[id] || { id, error: "missing" }, true)).join("");
   const equityHtml = equityIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
-  const ratesHtml = ratesIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const inflHtml = inflationIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const laborHtml = laborIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
   const moneyHtml = moneyIds.map((id) => card(byId[id] || { id, error: "missing" })).join("");
@@ -621,9 +618,6 @@ export function renderHtml(snapshot, _news, calendar) {
 
   <h2>주식 지수</h2>
   <div class="grid four">${equityHtml}</div>
-
-  <h2>금리</h2>
-  <div class="grid four">${ratesHtml}</div>
 
   <h2>물가</h2>
   <div class="grid">${inflHtml}</div>

@@ -8,10 +8,6 @@ const QUERIES = {
   nasdaq:       { q: "NASDAQ index" },
   vix:          { q: "VIX volatility index" },
   usd_krw:      { q: "원달러 환율 USD KRW", ko: true },
-  kr_base_rate: { q: "한국은행 기준금리", ko: true },
-  us_fed_funds: { q: "Fed funds rate FOMC" },
-  kr_10y:       { q: "한국 10년 국채 금리", ko: true },
-  us_10y:       { q: "US 10-year treasury yield" },
   kr_cpi_yoy:   { q: "한국 소비자물가 CPI", ko: true },
   us_cpi_yoy:   { q: "US CPI inflation report" },
   kr_unemp:     { q: "한국 실업률 고용", ko: true },
@@ -102,12 +98,6 @@ const STATIC_ANALYSIS = {
 
   // FX
   usd_krw:      "Fed 인하 속도 후퇴 우려와 한미 금리차 부담으로 원화 약세 재개, 1,475원(+1.4%). 5월 저점 1,444원에서 31원 반등하며 1M 고점 1,487원 근접.",
-
-  // 금리
-  kr_base_rate: "한은이 물가 하향 안정 가시화로 2.50% 동결 유지. 연내 추가 인하 가능성 시장 반영 중.",
-  us_fed_funds: "Fed가 9월·11월 두 차례 25bp 인하 후 3.50~3.75% 구간 유지. 추가 인하 속도는 인플레 데이터에 의존.",
-  kr_10y:       "한은 인하 사이클 + 미 국채 수익률 안정화로 한국 10년물 3.8% 박스권. 외국인 채권 매수가 하단 지지.",
-  us_10y:       "Fed 인하 기대와 안전자산 수요로 4.4% 부근 안정. 재정 적자 우려는 상단 제한 요인.",
 
   // 물가
   kr_cpi_yoy:   "에너지·식료품 가격 일시 상승으로 CPI 2.16% 반등. 한은은 연말 2% 안팎 수렴 전망 유지.",

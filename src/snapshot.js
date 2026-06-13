@@ -68,18 +68,6 @@ function pickLatestPrev(series) {
   return { latest: series[0]?.value, prev: series[1]?.value, date: series[0]?.date };
 }
 
-// 금리 카드용 변경 이력: 최신 + 직전 변경 2회 (DFF는 daily라 같은 값 반복 →
-// 다른 값으로 바뀐 시점만 추출). desc obs (최신 first) 가정.
-function rateHistory(obs, n = 3) {
-  const out = [];
-  for (let i = 0; i < obs.length && out.length < n; i++) {
-    if (out.length === 0 || out[out.length - 1].value !== obs[i].value) {
-      out.push({ date: obs[i].date, value: obs[i].value });
-    }
-  }
-  return out;
-}
-
 // CPI YoY 카드용 이력: 최신 n개월의 YoY 값 (dedup 없음 — 매월이 별도 데이터).
 // obs는 monthly desc, obs[i].value=원지수. obs[i] vs obs[i+12]로 YoY 계산.
 // n=3이면 obs[14]까지 필요 (16개 fetch면 안전).
@@ -92,30 +80,6 @@ function cpiHistory(obs, n = 3) {
     const yoy = ((cur.value - yearAgo.value) / yearAgo.value) * 100;
     out.push({ date: cur.date, value: yoy });
   }
-  return out;
-}
-
-async function buildKrBaseRate(env) {
-  const obs = await fetchEcos("722Y001", "0101000", "M", env, { count: 24 });
-  const { latest, prev, date } = pickLatestPrev(obs);
-  const out = { id: "kr_base_rate", region: "KR", label: "한국 기준금리", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
-  // ECOS yyyymm → ISO 변환 + asc 정렬 (computeStats는 startValue=window 첫 값 = 가장 오래된)
-  const ascSeries = obs.map((o) => ({
-    date: /^\d{6}$/.test(o.date) ? `${o.date.slice(0,4)}-${o.date.slice(4,6)}-01` : o.date,
-    value: o.value,
-  })).slice().reverse();
-  const stats = computeStats(ascSeries);
-  if (stats) out.stats = stats;
-  return out;
-}
-
-async function buildUsFedFunds(env) {
-  const obs = await fetchFred("DFF", env, { limit: 200 });
-  const { latest, prev, date } = pickLatestPrev(obs);
-  const out = { id: "us_fed_funds", region: "US", label: "美 연준 기준금리 (DFF)", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
-  const ascSeries = obs.map((o) => ({ date: o.date, value: o.value })).slice().reverse();
-  const stats = computeStats(ascSeries);
-  if (stats) out.stats = stats;
   return out;
 }
 
@@ -144,31 +108,6 @@ async function buildUsCpiYoy(env) {
   const obs = await fetchFred("CPIAUCSL", env, { limit: 16 });
   const yoy = computeYoYFromObs(obs);
   return { id: "us_cpi_yoy", region: "US", label: "美 CPI (YoY)", unit: "%", value: yoy.value, prev: yoy.prev, delta: deltaPair(yoy.value, yoy.prev), date: yoy.date, history: cpiHistory(obs, 3) };
-}
-
-async function buildKr10y(env) {
-  // 1Y daily for stats (yyyymmdd date) — stats 직접 채워서 enrichWithStats skip
-  const obs = await fetchEcos("817Y002", "010230000", "D", env, { count: 365 });
-  const { latest, prev, date } = pickLatestPrev(obs);
-  const out = { id: "kr_10y", region: "KR", label: "한국 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
-  // ECOS yyyymmdd → ISO + asc (오래된 → 최신)
-  const ascSeries = obs.map((o) => ({
-    date: /^\d{8}$/.test(o.date) ? `${o.date.slice(0,4)}-${o.date.slice(4,6)}-${o.date.slice(6,8)}` : o.date,
-    value: o.value,
-  })).slice().reverse();
-  const stats = computeStats(ascSeries);
-  if (stats) out.stats = stats;
-  return out;
-}
-
-async function buildUs10y(env) {
-  const obs = await fetchFred("DGS10", env, { limit: 365 });
-  const { latest, prev, date } = pickLatestPrev(obs);
-  const out = { id: "us_10y", region: "US", label: "美 10년 국채", unit: "%", value: latest, prev, delta: deltaPair(latest, prev), date, history: rateHistory(obs, 3) };
-  const ascSeries = obs.map((o) => ({ date: o.date, value: o.value })).slice().reverse();
-  const stats = computeStats(ascSeries);
-  if (stats) out.stats = stats;
-  return out;
 }
 
 async function buildKrUnemp(env) {
@@ -317,12 +256,8 @@ function makeBigtechBuilder(t) {
 }
 
 const BUILDERS = [
-  { id: "kr_base_rate", fn: buildKrBaseRate },
-  { id: "us_fed_funds", fn: buildUsFedFunds },
   { id: "kr_cpi_yoy", fn: buildKrCpiYoy },
   { id: "us_cpi_yoy", fn: buildUsCpiYoy },
-  { id: "kr_10y", fn: buildKr10y },
-  { id: "us_10y", fn: buildUs10y },
   { id: "kr_unemp", fn: buildKrUnemp },
   { id: "us_unemp", fn: buildUsUnemp },
   { id: "kr_m2", fn: buildKrM2 },
@@ -352,7 +287,6 @@ export async function buildSnapshot(env) {
   const order = [
     "usd_krw", "vix",
     "kospi", "kosdaq", "sp500", "nasdaq",
-    "kr_base_rate", "us_fed_funds", "kr_10y", "us_10y",
     "kr_cpi_yoy", "us_cpi_yoy", "kr_unemp", "us_unemp",
     "kr_m2", "us_m2",
     "gold", "silver", "copper", "btc",

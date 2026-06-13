@@ -85,7 +85,7 @@ Repo: https://github.com/k23380508/mp1
 src/
 ├── index.js        라우터 (/, /api/snapshot, /api/series, /api/reasons, /api/calendar, /healthz, /favicon.{ico,svg})
 ├── render.js       HTML 렌더링 + 모달 클라 JS + CHARTABLE_IDS Set
-├── snapshot.js     21개 KR/US 거시 지표 집계 (BUILDERS + order, 통화량 M2 포함)
+├── snapshot.js     17개 KR/US 거시 지표 집계 (BUILDERS + order, 통화량 M2 포함, 금리 4종 제외)
 ├── series.js       SERIES_REGISTRY + fetchSeries(id, range) — 차트 모달용 시계열 (1M/3M/6M/1Y/5Y, YoY 자동 계산)
 ├── kv.js           MACRO_CACHE KV (snapshot 90분, series 1시간, news 30분)
 └── sources/

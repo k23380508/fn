@@ -1,5 +1,5 @@
 {
-  "name": "mp1",
+  "name": "fn",
   "main": "src/index.js",
   "workers_dev": true,
   "preview_urls": true,

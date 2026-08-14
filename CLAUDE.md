@@ -1,8 +1,11 @@
-# mp1 — KR vs US 거시 대시보드
+# fn — KR vs US 거시 대시보드
 
-Cloudflare Worker. 배포: https://mp1.k23380508.workers.dev
-Repo: https://github.com/k23380508/mp1
-워커 이름: `mp1` (wrangler.jsonc — 변경 금지, 변경 시 배포 URL 죽음)
+Cloudflare Worker. 배포: https://fn.k23380508.workers.dev
+Repo: https://github.com/k23380508/fn
+워커 이름: `fn` (wrangler.jsonc — 변경 금지, 변경 시 배포 URL 죽음)
+
+작업 폴더: `/Users/james/min/fn` (2026-08-14 새 클론). 구 Google Drive 사본
+(`~/Library/CloudStorage/GoogleDrive-…/GDP/MP/mp1`)은 remote 가 옛 `mp1` 레포를 가리키는 폐기 대상.
 
 ## 변경 시 영향 매트릭스 (필수 — 변경 전 확인)
 
@@ -45,6 +48,9 @@ Repo: https://github.com/k23380508/mp1
 
 **main이 트렁크다** = 배포본 = 단일 기준선 (2026-06-13 정리 완료, main 보호 없음). 기본 작업 위치는 main.
 
+⚠️ 2026-08-14 부터 **`main` push = Cloudflare 자동 배포**다. commit·push 는 곧 라이브 반영이니,
+push 전에 최소한 `npx wrangler deploy --dry-run` 은 통과시킬 것. 자세한 건 아래 [배포] 절.
+
 ### 기본: main에서 직접 작업
 - 대부분의 변경(버그 수정·카드 추가/삭제·문구 수정 등)은 **브랜치 만들지 말고 main에서 바로 commit → 즉시 push**. commit과 push는 한 단위.
 - 이러면 브랜치가 안 생기고 main이 항상 최신을 유지함.
@@ -61,33 +67,37 @@ Repo: https://github.com/k23380508/mp1
 - 세션 종료 전: `git status` clean + `git log @{u}..` 비어있음(미푸시 0) + **`git branch` 결과가 `main` + 의도적으로 보존하는 WIP뿐인지 확인**.
 - 상세는 글로벌 메모리 [auto_push_rule.md] 참조.
 
-## 다중 기기/세션 작업 규칙 (필수)
+## 다중 기기/세션 작업 규칙 (필수) — 기준선은 GitHub 다
 
-이 프로젝트는 Google Drive(`~/Library/CloudStorage/GoogleDrive-…/내 드라이브/GDP/MP/mp1`)에 있어 여러 기기에서 동시 접근 가능. Google Drive의 비동기 파일 sync와 git이 충돌하면 `.git/index` 깨짐, ref 분기, 미푸시 손실 발생.
+2026-08-14 부터 **동기화 매체는 Google Drive 가 아니라 GitHub `k23380508/fn` 레포다.**
+어느 기기든 clone 해서 쓰고, 옮기는 수단은 오직 push/pull 이다.
 
-**모든 세션에서 반드시 따른다:**
+**구 Google Drive 사본은 폐기 대상**: `~/Library/CloudStorage/GoogleDrive-…/내 드라이브/GDP/MP/mp1`
+(그리고 `다른 컴퓨터/내 Mac/GD2/mp1`). remote 가 옛 `github.com/k23380508/mp1` 을 가리키고
+main 이 2026-06-13 에 멈춰 있다. 거기서 계속 작업하면 이름 변경 이후 내용과 갈라진다.
+쓸 거라면 `git remote set-url origin https://github.com/k23380508/fn.git && git pull --ff-only origin main` 부터.
 
 ### 세션 시작 시 (작업 시작 전 항상)
 1. `git status` — 미커밋 변경 확인
-2. `git pull --ff-only origin main` — 원격이 앞서 있으면 가져옴. **non-fast-forward면 즉시 STOP**, 사용자에게 alert (다른 기기 작업과 분기됨)
-3. Google Drive online-only(스트리밍) 파일은 접근 시 자동 다운로드되지만, 확실히 하려면 Finder에서 폴더 우클릭 → "오프라인 사용 설정(Available offline)"
-4. `npm install` — package-lock 변경됐을 수 있음
+2. `git pull --ff-only origin main` — **non-fast-forward면 즉시 STOP**, 사용자에게 alert (다른 기기 작업과 분기됨)
+3. `npm install` — package-lock 변경됐을 수 있음
 
 ### 작업 중
-5. **작은 단위로 commit** — 큰 변경 누적 금지 (다른 기기와 충돌 시 손실 커짐)
-6. WIP도 반드시 브랜치로 push: `wip/<topic>` (잃지 않기)
-7. 동시에 다른 기기서 dev server 띄우지 않기 (포트·`.wrangler/` 캐시 충돌)
+4. **작은 단위로 commit** — 큰 변경 누적 금지 (다른 기기와 충돌 시 손실 커짐)
+5. WIP도 반드시 브랜치로 push: `wip/<topic>` (잃지 않기).
+   단 **`main` push 는 곧 라이브 배포**이므로, 검증 안 된 변경은 main 에 올리지 말 것.
+6. 동시에 다른 기기서 dev server 띄우지 않기 (포트·`.wrangler/` 캐시 충돌)
 
 ### 세션 종료 전 (필수)
-8. `git status` — working tree clean 확인
-9. `git push origin <branch>` — **미푸시 0개 보장**
-10. 30초 대기 — Google Drive 메뉴바 아이콘이 동기화 완료될 때까지 (다른 기기 즉시 사용 시)
+7. `git status` — working tree clean 확인
+8. `git push origin <branch>` — **미푸시 0개 보장**
+9. main 에 push 했다면 1~2분 뒤 라이브 URL 200 확인 (배포까지가 한 단위)
 
 ### 절대 금지
-- Google Drive sync에 의존해서 git 없이 다른 기기로 옮기기 (`.git/` 부분 sync 시 repo 깨짐)
-- 미푸시 상태로 다른 기기 시작 (분기 발생 → 오늘처럼 수동 cherry-pick 필요)
+- 파일 동기화(Drive·AirDrop 등)에 의존해 git 없이 다른 기기로 옮기기 (`.git/` 부분 sync 시 repo 깨짐)
+- 미푸시 상태로 다른 기기 시작 (분기 발생 → 수동 cherry-pick 필요)
 - 두 기기 동시 작업 (한 시점에 한 기기만)
-- `git push --force` (다른 기기 미푸시 작업 날아감)
+- `git push --force` (다른 기기 미푸시 작업 날아감 + 라이브가 옛 코드로 되돌아감)
 
 ## 프로젝트 구조
 
@@ -115,15 +125,40 @@ src/
 - Secrets: ECOS API key, FRED API key (각 source에서 `env.*`로 참조 — `wrangler secret put`로 관리)
 - compatibility_date: 2026-05-02
 
-## 배포
+## 배포 — GitHub push 가 곧 배포다 (2026-08-14 확인)
+
+Cloudflare **Workers Builds** 가 `k23380508/fn` 레포에 연결돼 있고 **`main` 브랜치**를 감시한다.
+`main` 에 push 하면 Cloudflare 가 알아서 빌드·배포한다. **`npm run deploy` 를 수동 실행하지 말 것**
+— 수동 배포와 자동 배포가 엇갈리면 어느 커밋이 라이브인지 추적 불가.
+
+| 항목 | 값 |
+|---|---|
+| 배포 트리거 | `main` push (실측: 02:19 push → 02:20 배포) |
+| 빌드 주체 | Cloudflare Workers Builds (Git integration) |
+| 워커 이름 | `fn` (`wrangler.jsonc` 의 `name` — 레포와 워커 이름이 어긋나면 엉뚱한 워커가 새로 생긴다) |
+| 라이브 URL | https://fn.k23380508.workers.dev |
 
 ```bash
-npm run dev      # localhost:8787
-npm run deploy   # mp1.k23380508.workers.dev
-npx wrangler tail mp1   # 라이브 로그
+# 1. 세션 시작 — 원격이 기준선
+git pull --ff-only origin main
+
+# 2. 로컬 확인
+npm run dev                      # localhost:8787
+npx wrangler deploy --dry-run    # 계정 안 건드리고 빌드·바인딩만 검증
+
+# 3. push = 배포
+git add -A && git commit -m "..." && git push origin main
+
+# 4. 1~2분 뒤 라이브 검증
+curl -s -o /dev/null -w "%{http_code}\n" https://fn.k23380508.workers.dev
+npx wrangler deployments list --name fn | tail -12   # 새 Created 시각이 찍혔는지
+npx wrangler tail fn                                  # 라이브 로그
 ```
 
-배포 전 `git status` clean 확인 → 배포 후 `git push` (배포본과 git이 일치해야 함).
+- 빌드 실패 확인: Cloudflare 대시보드 → Workers & Pages → `fn` → **Builds** 탭.
+- KV 캐시가 90분이라 카드·데이터 변경은 배포 후 `?fresh=1` 을 한 번 불러야 즉시 반영된다.
+- 원격(클라우드) 세션에서는 `*.workers.dev` egress 가 막혀 있어 라이브 검증이 안 된다.
+  `HTTP 000` 을 배포 실패로 오판하지 말 것 — 로컬 dry-run 까지만 하고 라이브 확인은 사용자에게 요청.
 
 ## 데이터 출처 / 정책
 
